@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { mensajeError } from '@/lib/consultas';
 import { fmtFecha, fmtNumero, hoyISO, nombrePeriodo } from '@/lib/formato';
 import { usePeriodos } from '@/hooks/usePeriodos';
+import { descargarReportePeriodo } from '@/lib/reportePdf';
 import { Aviso, Cargando, Encabezado, Insignia, Modal, Tarjeta } from '@/components/ui';
 import type { Periodo, ResumenPeriodo } from '@/types/database';
 
@@ -14,6 +15,18 @@ export default function Periodos() {
   const [cerrando, setCerrando] = useState<Periodo | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
   const activo = periodos.datos?.find((p) => p.activo);
+  const [generando, setGenerando] = useState<string | null>(null);
+
+  async function reporte(p: Periodo) {
+    setGenerando(p.id);
+    try {
+      await descargarReportePeriodo(p);
+    } catch (e) {
+      setMensaje({ tono: 'error', texto: `No se pudo armar el reporte: ${mensajeError(e)}` });
+    } finally {
+      setGenerando(null);
+    }
+  }
 
   return (
     <div>
@@ -58,6 +71,7 @@ export default function Periodos() {
                 <th>Inicio</th>
                 <th>Cierre</th>
                 <th>Estado</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -67,11 +81,16 @@ export default function Periodos() {
                   <td>{fmtFecha(p.fecha_inicio)}</td>
                   <td>{fmtFecha(p.fecha_cierre)}</td>
                   <td>{p.activo ? <Insignia color="verde">Abierto</Insignia> : <Insignia>Cerrado</Insignia>}</td>
+                  <td className="text-right">
+                    <button className="boton-chico whitespace-nowrap" disabled={generando !== null} onClick={() => void reporte(p)}>
+                      {generando === p.id ? 'Armando…' : 'Reporte PDF'}
+                    </button>
+                  </td>
                 </tr>
               ))}
               {periodos.datos?.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-slate-500">
+                  <td colSpan={5} className="py-8 text-center text-slate-500">
                     Todavía no hay períodos.
                   </td>
                 </tr>

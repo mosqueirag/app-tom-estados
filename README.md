@@ -299,6 +299,32 @@ de nuevo para ver los cambios.
 o una cuenta, al crear una cuenta en su ruta (a mano o por Excel) y al modificar una de sus
 cuentas.
 
+### Historial de consumo y reporte del período
+
+- **Historial:** en **Cuentas** o **Lecturas**, el botón **Historial** muestra un gráfico con el
+  consumo de los últimos 12 períodos de la cuenta, el promedio y en naranja los consumos de más
+  del doble del promedio.
+- **Reporte PDF:** en **Períodos**, **Reporte PDF** arma el resumen del período: avance por ruta
+  y por operador, alertas (con fecha y hora), conflictos y cómo se resolvieron, y las cuentas sin
+  leer si el período sigue abierto.
+
+### Copia de seguridad
+
+1. **Manual, desde la app:** en el **Panel**, **Descargar copia de seguridad** baja un Excel con
+   todas las tablas. Conviene hacerlo al cerrar cada período.
+2. **Automática, todos los días:** el workflow `.github/workflows/copia-de-seguridad.yml` hace un
+   `pg_dump` completo a las 3 de la mañana, lo cifra y lo guarda 90 días en GitHub (Actions →
+   Copia de seguridad → Artifacts). Para activarlo hay que cargar dos secrets en GitHub →
+   Settings → Secrets and variables → Actions:
+   - `SUPABASE_DB_URL`: en Supabase, **Connect → Session pooler**, con la contraseña de la base
+     (si no la tenés, se cambia en Project Settings → Database → Reset database password).
+   - `BACKUP_PASSPHRASE`: una clave larga que inventes. Guardala: sin ella la copia no se abre.
+
+   Para restaurar: `gpg -d copia-AAAA-MM-DD.dump.gpg > copia.dump` y
+   `pg_restore --clean --if-exists --no-owner -d "<cadena de conexión>" copia.dump`.
+
+Las fotos no entran en ninguna de las dos copias: quedan en Supabase Storage.
+
 ### Orden de recorrido
 
 En **Rutas → Ordenar recorrido** el admin pone las cuentas de cada ruta en el orden en que se

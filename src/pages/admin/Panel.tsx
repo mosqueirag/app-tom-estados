@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { mensajeError } from '@/lib/consultas';
 import { fmtFecha, fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
+import { descargarCopiaDeSeguridad } from '@/lib/copiaSeguridad';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, BarraProgreso, Cargando, Encabezado, Insignia, Tarjeta } from '@/components/ui';
 import type { Configuracion, Periodo, ResumenPeriodo, VLectura } from '@/types/database';
@@ -123,6 +124,7 @@ export default function PanelAdmin() {
       {config && <Umbral config={config} alGuardar={() => void panel.recargar()} />}
       {config && <FotoObligatoria config={config} alGuardar={() => void panel.recargar()} />}
       {config && <Localidad config={config} alGuardar={() => void panel.recargar()} />}
+      <CopiaDeSeguridad />
     </div>
   );
 }
@@ -246,6 +248,42 @@ function Localidad({ config, alGuardar }: { config: Configuracion; alGuardar: ()
           Guardar
         </button>
       </div>
+      {estado && (
+        <Aviso tono={estado.tono} className="mt-3">
+          {estado.texto}
+        </Aviso>
+      )}
+    </Tarjeta>
+  );
+}
+
+function CopiaDeSeguridad() {
+  const [estado, setEstado] = useState<{ tono: 'exito' | 'error'; texto: string } | null>(null);
+  const [descargando, setDescargando] = useState(false);
+
+  async function descargar() {
+    setDescargando(true);
+    setEstado(null);
+    try {
+      const n = await descargarCopiaDeSeguridad();
+      setEstado({ tono: 'exito', texto: `Copia descargada: ${fmtNumero(n.cuentas)} cuentas y ${fmtNumero(n.lecturas)} lecturas. Guardala en un lugar seguro.` });
+    } catch (e) {
+      setEstado({ tono: 'error', texto: `No se pudo armar la copia: ${mensajeError(e)}` });
+    } finally {
+      setDescargando(false);
+    }
+  }
+
+  return (
+    <Tarjeta>
+      <h2 className="font-semibold">Copia de seguridad</h2>
+      <p className="mt-1 text-sm text-slate-600">
+        Descarga un Excel con todas las cuentas, períodos, lecturas, conflictos, correcciones y operadores. Conviene bajarla al cerrar
+        cada período.
+      </p>
+      <button className="boton-secundario mt-3" onClick={() => void descargar()} disabled={descargando}>
+        {descargando ? 'Armando la copia…' : 'Descargar copia de seguridad'}
+      </button>
       {estado && (
         <Aviso tono={estado.tono} className="mt-3">
           {estado.texto}

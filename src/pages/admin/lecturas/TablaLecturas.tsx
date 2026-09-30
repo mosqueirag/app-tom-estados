@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { VerFoto } from '@/components/VerFoto';
+import { HistorialConsumo } from '@/components/HistorialConsumo';
 import { linkMapa } from '@/lib/ubicacion';
 import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
 import { useConsulta } from '@/hooks/useConsulta';
@@ -39,6 +40,7 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
   const [pagina, setPagina] = useState(0);
   const [corrigiendo, setCorrigiendo] = useState<VLectura | null>(null);
   const [foto, setFoto] = useState<VLectura | null>(null);
+  const [historial, setHistorial] = useState<VLectura | null>(null);
   const clave = JSON.stringify(filtros);
   const [claveAnterior, setClaveAnterior] = useState(clave);
   if (clave !== claveAnterior) {
@@ -122,7 +124,10 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
                     )}
                     {!l.foto_path && l.latitud === null && <span className="text-xs text-slate-400">—</span>}
                   </td>
-                  <td className="text-right">
+                  <td className="whitespace-nowrap text-right">
+                    <button className="boton-chico mr-1" onClick={() => setHistorial(l)}>
+                      Historial
+                    </button>
                     <button className="boton-chico" onClick={() => setCorrigiendo(l)}>
                       {periodoActivo ? 'Corregir' : 'Ver'}
                     </button>
@@ -143,6 +148,10 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
       <div className="px-4 pb-4">
         <Paginador pagina={pagina} porPagina={POR_PAGINA} total={lista.datos?.total ?? 0} alCambiar={setPagina} />
       </div>
+      <HistorialConsumo
+        cuenta={historial ? { id: historial.cuenta_id, numero_cuenta: historial.numero_cuenta, titular: historial.titular } : null}
+        alCerrar={() => setHistorial(null)}
+      />
       <VerFoto titulo={foto ? `Cuenta ${foto.numero_cuenta} · ${fmtFechaHora(foto.fecha_lectura)}` : ''} path={foto?.foto_path ?? null} alCerrar={() => setFoto(null)} />
       <CorregirLectura
         lectura={corrigiendo}

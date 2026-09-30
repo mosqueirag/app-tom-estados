@@ -178,7 +178,7 @@ await intentar('Panel con datos', async () => {
   const t = await main.textContent();
   ok('Panel: progreso, alertas y conflictos', t.includes('Menor a la anterior') && t.includes('Consumo anómalo') && /Conflictos\s*1/.test(t));
   if (CAPT) await page.screenshot({ path: `${CAPT}/fase3-panel.png`, fullPage: true });
-  await main.getByLabel('Umbral de consumo anómalo').fill('2,5'); await main.getByRole('button', { name: 'Guardar' }).click();
+  await main.getByLabel('Umbral de consumo anómalo').fill('2,5'); await main.getByRole('heading', { name: 'Alerta de consumo anómalo' }).locator('..').getByRole('button', { name: 'Guardar' }).click();
   await main.getByText('Umbral guardado').waitFor();
   ok('Panel: umbral configurable', psql('select umbral_consumo_anomalo from configuracion') === '2.50');
 });

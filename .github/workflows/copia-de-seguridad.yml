@@ -1,0 +1,72 @@
+# Copia de seguridad automática de la base de Supabase, todos los días a las
+# 3 de la mañana (hora de Argentina). La copia se cifra con una clave antes de
+# guardarla: el repositorio es público y los artefactos se pueden descargar.
+#
+# Para activarla, cargá dos secrets en GitHub → Settings → Secrets and
+# variables → Actions:
+#   SUPABASE_DB_URL     cadena de conexión "Session pooler" de Supabase
+#                       (Project Settings → Database → Connect), con la
+#                       contraseña de la base.
+#   BACKUP_PASSPHRASE   una clave larga para cifrar la copia. Guardala: sin
+#                       ella la copia no se puede abrir.
+# Sin esos secrets el workflow no hace nada (solo avisa).
+name: Copia de seguridad
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  copia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Revisar configuración
+        id: config
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          CLAVE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$CLAVE" ]; then
+            echo "::warning::Copia de seguridad sin configurar: faltan los secrets SUPABASE_DB_URL y BACKUP_PASSPHRASE."
+            echo "listo=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "listo=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Instalar pg_dump 17
+        if: steps.config.outputs.listo == 'si'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Copiar y cifrar
+        if: steps.config.outputs.listo == 'si'
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          CLAVE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          FECHA=$(TZ=America/Argentina/Buenos_Aires date +%Y-%m-%d)
+          /usr/lib/postgresql/17/bin/pg_dump "$DB" --format=custom --no-owner --no-privileges \
+            --schema=public --schema=auth --file=copia.dump
+          gpg --batch --yes --pinentry-mode loopback --symmetric --cipher-algo AES256 \
+            --passphrase "$CLAVE" --output "copia-${FECHA}.dump.gpg" copia.dump
+          rm copia.dump
+          ls -lh "copia-${FECHA}.dump.gpg"
+          echo "FECHA=${FECHA}" >> "$GITHUB_ENV"
+
+      - name: Guardar la copia (90 días)
+        if: steps.config.outputs.listo == 'si'
+        uses: actions/upload-artifact@v4
+        with:
+          name: copia-${{ env.FECHA }}
+          path: copia-*.dump.gpg
+          retention-days: 90

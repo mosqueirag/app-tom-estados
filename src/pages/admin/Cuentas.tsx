@@ -6,6 +6,7 @@ import { descargarPlantillaCuentas, exportarCuentas } from '@/lib/excel';
 import { useConsulta, useDemorado } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Encabezado, Insignia, Paginador, Tarjeta } from '@/components/ui';
 import type { Cuenta } from '@/types/database';
+import { HistorialConsumo } from '@/components/HistorialConsumo';
 import { FormularioCuenta } from './cuentas/FormularioCuenta';
 import { ImportarCuentas } from './cuentas/ImportarCuentas';
 
@@ -23,6 +24,7 @@ export default function Cuentas() {
   const [pagina, setPagina] = useState(0);
   const [editando, setEditando] = useState<Cuenta | 'nueva' | null>(null);
   const [importando, setImportando] = useState(false);
+  const [historial, setHistorial] = useState<Cuenta | null>(null);
   const [mensaje, setMensaje] = useState<{ tono: 'exito' | 'error'; texto: string } | null>(null);
   const q = limpiarBusqueda(useDemorado(busqueda));
 
@@ -181,6 +183,9 @@ export default function Cuentas() {
                     </td>
                     <td className="text-right tabular-nums">{fmtNumero(c.ultimo_consumo)}</td>
                     <td className="whitespace-nowrap text-right">
+                      <button className="boton-chico mr-2" onClick={() => setHistorial(c)}>
+                        Historial
+                      </button>
                       <button className="boton-chico mr-2" onClick={() => setEditando(c)}>
                         Editar
                       </button>
@@ -228,6 +233,7 @@ export default function Cuentas() {
           void rutas.recargar();
         }}
       />
+      <HistorialConsumo cuenta={historial} alCerrar={() => setHistorial(null)} />
     </div>
   );
 }

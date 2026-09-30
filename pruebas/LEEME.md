@@ -15,6 +15,7 @@ Son para quien mantenga el código (no hace falta correrlas para usar la app).
 | `fase7.mjs` | Lecturas en vivo (Realtime simulado), campana con fecha y hora, cuenta nueva con operador de la ruta, varias rutas por operador | 20 |
 | `fase8.mjs` | Foto del medidor (con y sin señal, obligatoria), GPS, foto y mapa en el admin | 17 |
 | `fase9.mjs` | Orden de recorrido por ruta, pestaña Recorrido, Cómo llegar con localidad o GPS | 9 |
+| `fase10.mjs` | Historial de consumo, reporte PDF del período y copia de seguridad en Excel | 12 |
 
 ## Cómo se corren
 
