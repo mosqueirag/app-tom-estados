@@ -186,6 +186,7 @@ await intentar('Panel con datos', async () => {
 await intentar('Lecturas', async () => {
   await main.getByRole('link', { name: /Menor a la anterior/ }).click();
   await page.waitForURL(/alerta=menor_anterior/);
+  await main.getByRole('heading', { name: 'Lecturas', exact: true }).waitFor();
   await main.locator('tbody tr').first().waitFor();
   ok('Lecturas: filtro "menor a la anterior" desde el panel', (await main.locator('tbody tr').count()) === 1 && (await main.locator('tbody').textContent()).includes('10010'));
   await main.getByLabel('Alertas').selectOption('todas');

@@ -7,6 +7,7 @@ import { useAuth } from '@/auth/contexto';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Encabezado, Insignia, Modal, Tarjeta } from '@/components/ui';
 import type { VOperador, VRuta } from '@/types/database';
+import { MandarMensaje } from '@/components/MandarMensaje';
 
 type Mensaje = { tono: 'exito' | 'error'; texto: string };
 
@@ -17,6 +18,7 @@ export default function Operadores() {
   const [reseteando, setReseteando] = useState<VOperador | null>(null);
   const [asignandoRutas, setAsignandoRutas] = useState<VOperador | null>(null);
   const [pasando, setPasando] = useState<VOperador | null>(null);
+  const [escribiendo, setEscribiendo] = useState(false);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
   const [trabajando, setTrabajando] = useState<string | null>(null);
 
@@ -31,6 +33,13 @@ export default function Operadores() {
     if (error) throw error;
     return data;
   }, []);
+
+  const enviados = useConsulta(async () => {
+    const { data, error } = await supabase.from('mensajes').select('*').order('created_at', { ascending: false }).limit(10);
+    if (error) throw error;
+    return data;
+  }, []);
+  const operadoresActivos = lista.datos?.filter((o) => o.activo && o.rol === 'operador') ?? [];
 
   const rutasDe = (id: string) => rutas.datos?.filter((r) => r.operador_id === id).map((r) => r.ruta) ?? [];
 
@@ -53,6 +62,9 @@ export default function Operadores() {
   return (
     <div>
       <Encabezado titulo="Operadores">
+        <button className="boton-chico" onClick={() => setEscribiendo(true)}>
+          Mandar mensaje
+        </button>
         <button className="boton-primario min-h-9 px-4 text-sm" onClick={() => setCreando(true)}>
           Nuevo operador
         </button>
@@ -128,6 +140,32 @@ export default function Operadores() {
         )}
       </Tarjeta>
 
+      {!!enviados.datos?.length && (
+        <Tarjeta className="mt-6">
+          <h2 className="mb-2 font-semibold">Últimos mensajes enviados</h2>
+          <ul className="divide-y divide-slate-100 text-sm">
+            {enviados.datos.map((m) => (
+              <li key={m.id} className="py-2">
+                <p className="whitespace-pre-line">{m.texto}</p>
+                <p className="text-xs text-slate-500">
+                  {fmtFechaHora(m.created_at)} · para {m.para_id ? (lista.datos?.find((o) => o.id === m.para_id)?.nombre ?? 'un operador') : 'todos'}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Tarjeta>
+      )}
+
+      <MandarMensaje
+        abierto={escribiendo}
+        operadores={operadoresActivos}
+        alCerrar={() => setEscribiendo(false)}
+        alEnviar={(texto) => {
+          setEscribiendo(false);
+          setMensaje({ tono: 'exito', texto });
+          void enviados.recargar();
+        }}
+      />
       <NuevoOperador
         abierto={creando}
         alCerrar={() => setCreando(false)}

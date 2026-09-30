@@ -7,6 +7,7 @@ import { fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { mensajeError } from '@/lib/consultas';
 import { Aviso } from '@/components/ui';
 import { ActivarAvisos } from '@/components/ActivarAvisos';
+import { MensajesOperador } from '@/components/MensajesOperador';
 
 export default function InicioOperador() {
   const auth = useAuth();
@@ -17,6 +18,7 @@ export default function InicioOperador() {
   const periodo = sync.descarga?.periodo;
   const [params, setParams] = useSearchParams();
   const pedidoPorAviso = useRef(false);
+  const [verMensajes] = useState(() => params.get('mensajes') === '1');
 
   async function descargar() {
     setMensaje(null);
@@ -32,6 +34,11 @@ export default function InicioOperador() {
       setMensaje({ tono: 'error', texto: `No se pudieron descargar las cuentas: ${mensajeError(e)}` });
     }
   }
+
+  // Al tocar el aviso de un mensaje la app abre /operador?mensajes=1
+  useEffect(() => {
+    if (params.get('mensajes') === '1') setParams({}, { replace: true });
+  }, [params, setParams]);
 
   // Al tocar el aviso de "cuentas nuevas" la app abre /operador?descargar=1: se descargan solas.
   useEffect(() => {
@@ -76,6 +83,8 @@ export default function InicioOperador() {
           {enLinea ? 'Las lecturas se envían solas.' : 'Podés seguir cargando lecturas: se guardan en el celular y se envían cuando vuelva la señal.'}
         </p>
       </section>
+
+      <MensajesOperador resaltar={verMensajes} />
 
       <ActivarAvisos />
 

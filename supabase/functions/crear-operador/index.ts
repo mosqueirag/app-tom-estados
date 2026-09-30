@@ -39,12 +39,15 @@ class ErrorHttp extends Error {
 interface ContextoAdmin {
   admin: User;
   servicio: SupabaseClient;
+  /** Cliente con la sesión del admin: así el historial de cambios registra quién fue. */
+  usuario: SupabaseClient;
 }
 
 async function exigirAdmin(req: Request): Promise<ContextoAdmin> {
   const url = Deno.env.get('SUPABASE_URL');
   const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!url || !serviceRole) {
+  const anon = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!url || !serviceRole || !anon) {
     throw new ErrorHttp(500, 'La función no está configurada (faltan variables de entorno).');
   }
 
@@ -70,7 +73,12 @@ async function exigirAdmin(req: Request): Promise<ContextoAdmin> {
     throw new ErrorHttp(403, 'Solo un administrador puede hacer esto.');
   }
 
-  return { admin: userData.user, servicio };
+  const usuario = createClient(url, anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+
+  return { admin: userData.user, servicio, usuario };
 }
 
 // Dominio para convertir "nombre de usuario" en un email interno de Supabase
@@ -91,7 +99,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return error('Método no permitido.', 405);
 
   try {
-    const { servicio } = await exigirAdmin(req);
+    const { servicio, usuario: sesionAdmin } = await exigirAdmin(req);
 
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== 'object') return error('Datos inválidos.');
@@ -130,7 +138,7 @@ Deno.serve(async (req) => {
 
     // El trigger al_crear_usuario crea el perfil como 'operador' DESACTIVADO
     // (así un registro por fuera de la app nunca tiene acceso). Acá se activa.
-    const { error: perfilError } = await servicio
+    const { error: perfilError } = await sesionAdmin
       .from('perfiles')
       .update({ activo: true, rol })
       .eq('id', data.user.id);

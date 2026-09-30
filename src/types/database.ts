@@ -80,6 +80,7 @@ export type Lectura = {
   longitud: number | null;
   precision_gps: number | null;
   foto_path: string | null;
+  audio_path: string | null;
 };
 
 export type LecturaCorreccion = {
@@ -143,6 +144,27 @@ export type VLectura = {
   longitud: number | null;
   precision_gps: number | null;
   foto_path: string | null;
+  audio_path: string | null;
+};
+
+export type Mensaje = {
+  id: number;
+  autor_id: string | null;
+  para_id: string | null;
+  texto: string;
+  created_at: string;
+};
+
+export type Auditoria = {
+  id: number;
+  tabla: 'cuentas' | 'perfiles';
+  registro_id: string;
+  descripcion: string;
+  accion: 'alta' | 'cambio' | 'baja';
+  usuario_id: string | null;
+  usuario_nombre: string | null;
+  cambios: Record<string, Json>;
+  fecha: string;
 };
 
 export type VRuta = {
@@ -250,6 +272,8 @@ export type Database = {
           Partial<LecturaConflicto>
       >;
       suscripciones_push: Tabla<SuscripcionPush, never, never>;
+      mensajes: Tabla<Mensaje, Pick<Mensaje, 'texto'> & Partial<Mensaje>, never>;
+      auditoria: Tabla<Auditoria, never, never>;
     };
     Views: {
       v_lecturas: { Row: VLectura; Relationships: [] };

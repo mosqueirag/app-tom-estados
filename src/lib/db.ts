@@ -49,7 +49,11 @@ export type FotoLocal = { lectura_id: string; blob: Blob; creada_at: string };
 
 export type Meta =
   | { clave: 'descarga'; operador_id: string; periodo: Periodo | null; umbral: number; foto_obligatoria?: boolean; localidad?: string; fecha: string; cantidad: number }
-  | { clave: 'sincronizacion'; fecha: string | null; error: string | null };
+  | { clave: 'sincronizacion'; fecha: string | null; error: string | null }
+  | { clave: 'mensajes'; operador_id: string; lista: MensajeLocal[]; fecha: string };
+
+/** Mensaje del administrador, guardado para verlo sin señal. */
+export type MensajeLocal = { id: number; texto: string; created_at: string; para_todos: boolean };
 
 export class BaseLocal extends Dexie {
   cuentas!: EntityTable<CuentaLocal, 'id'>;

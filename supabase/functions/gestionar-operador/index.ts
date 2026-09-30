@@ -41,12 +41,15 @@ class ErrorHttp extends Error {
 interface ContextoAdmin {
   admin: User;
   servicio: SupabaseClient;
+  /** Cliente con la sesión del admin: así el historial de cambios registra quién fue. */
+  usuario: SupabaseClient;
 }
 
 async function exigirAdmin(req: Request): Promise<ContextoAdmin> {
   const url = Deno.env.get('SUPABASE_URL');
   const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!url || !serviceRole) {
+  const anon = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!url || !serviceRole || !anon) {
     throw new ErrorHttp(500, 'La función no está configurada (faltan variables de entorno).');
   }
 
@@ -72,7 +75,12 @@ async function exigirAdmin(req: Request): Promise<ContextoAdmin> {
     throw new ErrorHttp(403, 'Solo un administrador puede hacer esto.');
   }
 
-  return { admin: userData.user, servicio };
+  const usuario = createClient(url, anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+
+  return { admin: userData.user, servicio, usuario };
 }
 
 // Dominio para convertir "nombre de usuario" en un email interno de Supabase
@@ -94,7 +102,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return error('Método no permitido.', 405);
 
   try {
-    const { admin, servicio } = await exigirAdmin(req);
+    const { admin, servicio, usuario } = await exigirAdmin(req);
 
     const body = await req.json().catch(() => null);
     const accion = body?.accion;
@@ -110,14 +118,14 @@ Deno.serve(async (req) => {
 
     switch (accion) {
       case 'desactivar': {
-        const { error: e1 } = await servicio.from('perfiles').update({ activo: false }).eq('id', operadorId);
+        const { error: e1 } = await usuario.from('perfiles').update({ activo: false }).eq('id', operadorId);
         if (e1) return error('No se pudo desactivar el operador.', 500);
         const { error: e2 } = await servicio.auth.admin.updateUserById(operadorId, { ban_duration: BLOQUEO_INDEFINIDO });
         if (e2) return error('Se desactivó el perfil pero no se pudo bloquear el acceso.', 500);
         return json({ mensaje: `${perfil.nombre} fue desactivado.` });
       }
       case 'activar': {
-        const { error: e1 } = await servicio.from('perfiles').update({ activo: true }).eq('id', operadorId);
+        const { error: e1 } = await usuario.from('perfiles').update({ activo: true }).eq('id', operadorId);
         if (e1) return error('No se pudo activar el operador.', 500);
         const { error: e2 } = await servicio.auth.admin.updateUserById(operadorId, { ban_duration: 'none' });
         if (e2) return error('Se activó el perfil pero no se pudo desbloquear el acceso.', 500);

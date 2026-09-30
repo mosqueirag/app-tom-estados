@@ -11,6 +11,7 @@ const SECCIONES = [
   { a: '/admin/mapa', texto: 'Mapa' },
   { a: '/admin/operadores', texto: 'Operadores' },
   { a: '/admin/periodos', texto: 'Períodos' },
+  { a: '/admin/historial', texto: 'Historial' },
 ];
 
 export default function AdminLayout() {

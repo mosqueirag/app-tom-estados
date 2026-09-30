@@ -5,6 +5,7 @@ import { mensajeError } from '@/lib/consultas';
 import { fmtFecha, fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
 import { descargarCopiaDeSeguridad } from '@/lib/copiaSeguridad';
+import { AvanceOperadores } from '@/components/AvanceOperadores';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, BarraProgreso, Cargando, Encabezado, Insignia, Tarjeta } from '@/components/ui';
 import type { Configuracion, Periodo, ResumenPeriodo, VLectura } from '@/types/database';
@@ -87,6 +88,8 @@ export default function PanelAdmin() {
             <Dato titulo="Consumo anómalo" valor={resumen.alertas_consumo_anomalo} a="/admin/lecturas?alerta=consumo_anomalo" alerta={resumen.alertas_consumo_anomalo > 0} />
             <Dato titulo="Conflictos" valor={resumen.conflictos_pendientes} a="/admin/lecturas?vista=conflictos" alerta={resumen.conflictos_pendientes > 0} />
           </div>
+
+          <AvanceOperadores periodoId={periodo.id} />
 
           <Tarjeta>
             <div className="mb-3 flex items-center justify-between">

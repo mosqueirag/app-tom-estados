@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { mensajeError } from '@/lib/consultas';
 import { fmtFecha, fmtNumero, hoyISO, nombrePeriodo } from '@/lib/formato';
 import { usePeriodos } from '@/hooks/usePeriodos';
+import { ComparacionPeriodos } from '@/components/ComparacionPeriodos';
 import { descargarReportePeriodo } from '@/lib/reportePdf';
 import { Aviso, Cargando, Encabezado, Insignia, Modal, Tarjeta } from '@/components/ui';
 import type { Periodo, ResumenPeriodo } from '@/types/database';
@@ -99,6 +100,8 @@ export default function Periodos() {
           </table>
         )}
       </Tarjeta>
+
+      {periodos.datos && <ComparacionPeriodos periodos={periodos.datos} />}
 
       <AbrirPeriodo
         abierto={abriendo}
