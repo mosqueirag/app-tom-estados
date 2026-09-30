@@ -1,0 +1,64 @@
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { fmtNumero } from '@/lib/formato';
+import { useConsulta } from '@/hooks/useConsulta';
+import { Aviso, Cargando, Paginador, Tarjeta } from '@/components/ui';
+
+const POR_PAGINA = 50;
+
+/** Cuentas activas que todavía no tienen lectura en el período. */
+export function TablaPendientes({ periodoId }: { periodoId: string }) {
+  const [pagina, setPagina] = useState(0);
+  const lista = useConsulta(async () => {
+    const { data, error, count } = await supabase
+      .rpc('cuentas_pendientes', { p_periodo_id: periodoId }, { count: 'exact' })
+      .range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA - 1);
+    if (error) throw error;
+    return { filas: data, total: count ?? 0 };
+  }, [periodoId, pagina]);
+
+  return (
+    <Tarjeta className="p-0">
+      {lista.error && <Aviso tono="error" className="m-4">{lista.error}</Aviso>}
+      {lista.cargando && !lista.datos ? (
+        <Cargando />
+      ) : (
+        <div className="overflow-x-auto">
+          <p className="px-4 pt-4 text-sm text-slate-600">{fmtNumero(lista.datos?.total ?? 0)} cuentas sin leer en este período.</p>
+          <table className="tabla mt-2">
+            <thead>
+              <tr>
+                <th>N° cuenta</th>
+                <th>Titular</th>
+                <th>Dirección</th>
+                <th>Medidor</th>
+                <th className="text-right">Última lectura</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.datos?.filas.map((c) => (
+                <tr key={c.id}>
+                  <td className="font-medium">{c.numero_cuenta}</td>
+                  <td>{c.titular}</td>
+                  <td>{c.direccion}</td>
+                  <td>{c.medidor}</td>
+                  <td className="text-right tabular-nums">{fmtNumero(c.ultima_lectura)}</td>
+                </tr>
+              ))}
+              {lista.datos?.filas.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-slate-500">
+                    ¡No quedan cuentas pendientes!
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="px-4 pb-4">
+        <Paginador pagina={pagina} porPagina={POR_PAGINA} total={lista.datos?.total ?? 0} alCambiar={setPagina} />
+      </div>
+    </Tarjeta>
+  );
+}

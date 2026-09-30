@@ -1,0 +1,43 @@
+# Configuración de Netlify (se lee sola al conectar el repositorio).
+# Las variables VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY y VITE_DOMINIO_USUARIOS
+# se cargan en Netlify → Site configuration → Environment variables.
+# La clave service_role NUNCA va en Netlify.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# El service worker y el manifest no se cachean: así los celulares se enteran
+# enseguida cuando hay una versión nueva.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "no-cache"
+
+# Los archivos de /assets llevan un hash en el nombre: se pueden guardar para siempre.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# App de una sola página: cualquier ruta (/admin, /operador/buscar…) abre index.html.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

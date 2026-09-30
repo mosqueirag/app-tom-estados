@@ -1,0 +1,9 @@
+# Configuración mínima para usar la CLI de Supabase (supabase link / db push /
+# functions deploy). Las funciones validan el token del usuario y su rol admin.
+project_id = "app-tom-estados"
+
+[functions.crear-operador]
+verify_jwt = true
+
+[functions.gestionar-operador]
+verify_jwt = true
