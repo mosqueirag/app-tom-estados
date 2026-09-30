@@ -19,16 +19,17 @@ export function ProveedorSync({ operadorId, children }: { operadorId: string; ch
   const pendientesRef = useRef(0);
 
   const conteos = useLiveQuery(async () => {
-    const [pendientes, conflictos, rechazadas] = await Promise.all([
+    const [pendientes, conflictos, rechazadas, fotos] = await Promise.all([
       db.lecturas.where({ operador_id: operadorId, estado: 'pendiente' }).count(),
       db.lecturas.where({ operador_id: operadorId, estado: 'conflicto' }).count(),
       db.lecturas.where({ operador_id: operadorId, estado: 'rechazada' }).count(),
+      db.fotos.count(),
     ]);
-    return { pendientes, conflictos, rechazadas };
+    return { pendientes, conflictos, rechazadas, fotos };
   }, [operadorId]);
   const estadoGuardado = useLiveQuery(() => db.meta.get('sincronizacion'), []) as Extract<Meta, { clave: 'sincronizacion' }> | undefined;
   const descarga = useLiveQuery(() => db.meta.get('descarga'), []) as Extract<Meta, { clave: 'descarga' }> | undefined;
-  pendientesRef.current = conteos?.pendientes ?? 0;
+  pendientesRef.current = (conteos?.pendientes ?? 0) + (conteos?.fotos ?? 0);
 
   const sincronizarAhora = useCallback(async () => {
     if (!navigator.onLine) {
@@ -77,6 +78,7 @@ export function ProveedorSync({ operadorId, children }: { operadorId: string; ch
       pendientes: conteos?.pendientes ?? 0,
       conflictos: conteos?.conflictos ?? 0,
       rechazadas: conteos?.rechazadas ?? 0,
+      fotosPendientes: conteos?.fotos ?? 0,
       sincronizando,
       descargando,
       ultimoResultado,

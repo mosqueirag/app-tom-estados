@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type CuentaLocal } from '@/lib/db';
 import { fmtFecha, fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { guardarLecturaLocal } from '@/lib/sincronizacion';
 import { nuevoUuid } from '@/lib/uuid';
+import { comprimirFoto } from '@/lib/fotos';
+import { obtenerUbicacion, type Ubicacion } from '@/lib/ubicacion';
 import { OBSERVACIONES_RAPIDAS, validarLectura } from '@/lib/validarLectura';
 import { useAuth } from '@/auth/contexto';
 import { useSync } from '@/sync/contexto';
@@ -20,6 +22,7 @@ export default function CargarLectura() {
   const operadorId = auth.estado === 'con_sesion' ? auth.perfil.id : '';
   const periodo = sync.descarga?.periodo ?? null;
   const umbral = sync.descarga?.umbral ?? 3;
+  const fotoObligatoria = Boolean(sync.descarga?.foto_obligatoria);
 
   const cuenta = useLiveQuery(() => db.cuentas.get(id), [id]);
   const previa = useLiveQuery(
@@ -39,6 +42,44 @@ export default function CargarLectura() {
   const [revisoAnomalo, setRevisoAnomalo] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [precargado, setPrecargado] = useState(false);
+  const [foto, setFoto] = useState<Blob | null>(null);
+  const [procesandoFoto, setProcesandoFoto] = useState(false);
+  const [ubicacion, setUbicacion] = useState<Ubicacion | null | 'buscando'>('buscando');
+
+  // Foto ya guardada de una lectura pendiente (se puede cambiar)
+  const fotoGuardada = useLiveQuery(async () => (previa?.tiene_foto ? ((await db.fotos.get(previa.id))?.blob ?? null) : null), [previa?.id, previa?.tiene_foto]);
+  const fotoVisible = foto ?? fotoGuardada ?? null;
+  const [urlFoto, setUrlFoto] = useState<string | null>(null);
+  useEffect(() => {
+    if (!fotoVisible) return setUrlFoto(null);
+    const url = URL.createObjectURL(fotoVisible);
+    setUrlFoto(url);
+    return () => URL.revokeObjectURL(url);
+  }, [fotoVisible]);
+
+  // La ubicación se pide al abrir la cuenta, así está lista al confirmar.
+  useEffect(() => {
+    let vigente = true;
+    void obtenerUbicacion().then((u) => vigente && setUbicacion(u));
+    return () => {
+      vigente = false;
+    };
+  }, [id]);
+
+  async function elegirFoto(e: ChangeEvent<HTMLInputElement>) {
+    const archivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!archivo) return;
+    setProcesandoFoto(true);
+    setError(null);
+    try {
+      setFoto(await comprimirFoto(archivo));
+    } catch {
+      setError('No se pudo usar esa foto. Probá sacarla de nuevo.');
+    } finally {
+      setProcesandoFoto(false);
+    }
+  }
 
   // Si hay una lectura pendiente (sin enviar), se puede corregir: se precarga.
   useEffect(() => {
@@ -50,7 +91,7 @@ export default function CargarLectura() {
     }
   }, [previa, precargado]);
 
-  if (cuenta === undefined || previa === undefined) return <Cargando />;
+  if (cuenta === undefined || previa === undefined || fotoGuardada === undefined) return <Cargando />;
   if (!cuenta) return <Aviso tono="error">No se encontró la cuenta en el celular. Volvé a descargar las cuentas.</Aviso>;
   if (!periodo) return <Aviso tono="alerta">No hay un período abierto. Descargá las cuentas de nuevo cuando el administrador lo abra.</Aviso>;
 
@@ -90,6 +131,10 @@ export default function CargarLectura() {
       setError('Contá por qué no se pudo leer (elegí una opción o escribila).');
       return;
     }
+    if (fotoObligatoria && !fotoVisible) {
+      setError('Sacá una foto del medidor para continuar.');
+      return;
+    }
     setError(null);
     setRevisoMenor(false);
     setRevisoAnomalo(false);
@@ -102,6 +147,7 @@ export default function CargarLectura() {
       if (!confirm(`¿Seguro? La lectura (${fmtNumero(v.valor)}) es MENOR que la anterior (${fmtNumero(anterior)}).\n\nConfirmá solo si es vuelta de medidor o cambio de medidor.`)) return;
     }
     setGuardando(true);
+    const gps = ubicacion === 'buscando' ? null : ubicacion;
     try {
       await guardarLecturaLocal({
         id: previa?.id ?? nuevoUuid(),
@@ -116,7 +162,10 @@ export default function CargarLectura() {
         observacion: observacion.trim() || null,
         sin_lectura: sinLectura,
         fecha_lectura: new Date().toISOString(),
-      });
+        latitud: gps?.latitud ?? previa?.latitud ?? null,
+        longitud: gps?.longitud ?? previa?.longitud ?? null,
+        precision_gps: gps?.precision ?? previa?.precision_gps ?? null,
+      }, foto);
       if (navigator.onLine) void sync.sincronizarAhora();
       navegar('/operador/buscar', { replace: true, state: { guardada: cuenta!.numero_cuenta } });
     } catch (e) {
@@ -153,6 +202,12 @@ export default function CargarLectura() {
           </dl>
           {sinLectura && <p className="mt-3 text-sm">No se pudo leer: {observacion}</p>}
           {!sinLectura && observacion && <p className="mt-3 text-sm">Observación: {observacion}</p>}
+          <div className="mt-3 flex items-center gap-3 text-sm text-slate-600">
+            {urlFoto && <img src={urlFoto} alt="Foto del medidor" className="size-16 rounded-lg object-cover" />}
+            <span>
+              {urlFoto ? 'Con foto' : 'Sin foto'} · <TextoUbicacion ubicacion={ubicacion} />
+            </span>
+          </div>
         </div>
 
         {v.menorQueAnterior && (
@@ -233,9 +288,34 @@ export default function CargarLectura() {
         <input className="campo" value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Escribí una observación" aria-label="Observación" />
       </div>
 
+      <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          {urlFoto ? (
+            <img src={urlFoto} alt="Foto del medidor" className="size-20 rounded-xl object-cover" />
+          ) : (
+            <div className="grid size-20 place-items-center rounded-xl bg-slate-100 text-slate-400" aria-hidden>
+              <svg viewBox="0 0 24 24" className="size-8" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.8 6.2 8 4.5h8l1.2 1.7H20a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7.2a1 1 0 0 1 1-1h2.8Z" />
+                <circle cx="12" cy="12.5" r="3.8" />
+              </svg>
+            </div>
+          )}
+          <div className="flex-1">
+            <p className="font-medium">Foto del medidor {fotoObligatoria ? '(obligatoria)' : '(recomendada)'}</p>
+            <label className="boton-secundario mt-2 min-h-11 cursor-pointer px-4">
+              {procesandoFoto ? 'Procesando…' : urlFoto ? 'Cambiar foto' : 'Sacar foto'}
+              <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => void elegirFoto(e)} aria-label="Foto del medidor" />
+            </label>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          <TextoUbicacion ubicacion={ubicacion} />
+        </p>
+      </section>
+
       {error && <Aviso tono="error">{error}</Aviso>}
 
-      <button className="boton-primario min-h-16 w-full text-lg" onClick={continuar}>
+      <button className="boton-primario min-h-16 w-full text-lg" onClick={continuar} disabled={procesandoFoto}>
         Continuar
       </button>
       <Link to="/operador/buscar" className="boton-secundario w-full">
@@ -243,6 +323,12 @@ export default function CargarLectura() {
       </Link>
     </div>
   );
+}
+
+function TextoUbicacion({ ubicacion }: { ubicacion: Ubicacion | null | 'buscando' }) {
+  if (ubicacion === 'buscando') return <>Buscando ubicación…</>;
+  if (!ubicacion) return <>Sin ubicación (activá el GPS para registrarla)</>;
+  return <>Ubicación tomada (±{ubicacion.precision} m)</>;
 }
 
 function FichaCuenta({ cuenta }: { cuenta: CuentaLocal }) {

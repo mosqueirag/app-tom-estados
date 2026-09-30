@@ -21,6 +21,7 @@ const Lecturas = lazy(() => import('@/pages/admin/Lecturas'));
 const Operadores = lazy(() => import('@/pages/admin/Operadores'));
 const Periodos = lazy(() => import('@/pages/admin/Periodos'));
 const Rutas = lazy(() => import('@/pages/admin/Rutas'));
+const Mapa = lazy(() => import('@/pages/admin/Mapa'));
 
 export default function App() {
   if (!configuracionCompleta) return <PantallaConfigFaltante />;
@@ -41,6 +42,7 @@ export default function App() {
               <Route path="cuentas" element={<Cuentas />} />
               <Route path="lecturas" element={<Lecturas />} />
               <Route path="rutas" element={<Rutas />} />
+              <Route path="mapa" element={<Mapa />} />
               <Route path="operadores" element={<Operadores />} />
               <Route path="periodos" element={<Periodos />} />
             </Route>

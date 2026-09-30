@@ -37,6 +37,8 @@ export type Cuenta = {
   activa: boolean;
   ruta: string;
   operador_id: string | null;
+  latitud: number | null;
+  longitud: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -54,6 +56,7 @@ export type Periodo = {
 export type Configuracion = {
   id: number;
   umbral_consumo_anomalo: number;
+  foto_obligatoria: boolean;
   updated_at: string;
 };
 
@@ -71,6 +74,10 @@ export type Lectura = {
   sincronizado_at: string;
   corregida_por: string | null;
   corregida_at: string | null;
+  latitud: number | null;
+  longitud: number | null;
+  precision_gps: number | null;
+  foto_path: string | null;
 };
 
 export type LecturaCorreccion = {
@@ -130,6 +137,10 @@ export type VLectura = {
   alerta_consumo_anomalo: boolean;
   alerta_sin_lectura: boolean;
   ruta: string;
+  latitud: number | null;
+  longitud: number | null;
+  precision_gps: number | null;
+  foto_path: string | null;
 };
 
 export type VRuta = {
@@ -263,6 +274,7 @@ export type Database = {
         Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string };
         Returns: undefined;
       };
+      registrar_extras_lecturas: { Args: { p_extras: Json }; Returns: number };
       resolver_conflicto: {
         Args: { p_conflicto_id: string; p_accion: 'descartar' | 'reemplazar' };
         Returns: undefined;

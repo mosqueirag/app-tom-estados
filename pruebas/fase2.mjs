@@ -64,7 +64,7 @@ await login('baneado@x.com', 'secreto');
 await page.getByText('Tu usuario está desactivado').waitFor(); ok('Usuario bloqueado muestra aviso', true);
 
 await login('jperez', 'secreto');
-await page.waitForURL(BASE + '/operador'); ok('Operador con nombre de usuario entra a /operador', await page.getByRole('heading', { name: 'Juan Pérez' }).isVisible());
+await page.waitForURL(BASE + '/operador'); await page.getByRole('heading', { name: 'Juan Pérez' }).waitFor().catch(() => {}); ok('Operador con nombre de usuario entra a /operador', await page.getByRole('heading', { name: 'Juan Pérez' }).isVisible());
 if (CAPT) await page.screenshot({ path: `${CAPT}/fase2-operador.png` });
 await page.goto(BASE + '/admin/cuentas'); await page.waitForURL(BASE + '/operador'); ok('Operador no puede entrar a /admin', true);
 

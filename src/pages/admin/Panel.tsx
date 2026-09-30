@@ -121,6 +121,7 @@ export default function PanelAdmin() {
       )}
 
       {config && <Umbral config={config} alGuardar={() => void panel.recargar()} />}
+      {config && <FotoObligatoria config={config} alGuardar={() => void panel.recargar()} />}
     </div>
   );
 }
@@ -170,6 +171,40 @@ function Umbral({ config, alGuardar }: { config: Configuracion; alGuardar: () =>
           Guardar
         </button>
       </div>
+      {estado && (
+        <Aviso tono={estado.tono} className="mt-3">
+          {estado.texto}
+        </Aviso>
+      )}
+    </Tarjeta>
+  );
+}
+
+function FotoObligatoria({ config, alGuardar }: { config: Configuracion; alGuardar: () => void }) {
+  const [estado, setEstado] = useState<{ tono: 'exito' | 'error'; texto: string } | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  async function cambiar(valor: boolean) {
+    setGuardando(true);
+    const { error } = await supabase.from('configuracion').update({ foto_obligatoria: valor }).eq('id', 1);
+    setGuardando(false);
+    if (error) setEstado({ tono: 'error', texto: mensajeError(error) });
+    else {
+      setEstado({ tono: 'exito', texto: 'Guardado. Los celulares lo toman al descargar las cuentas.' });
+      alGuardar();
+    }
+  }
+
+  return (
+    <Tarjeta>
+      <h2 className="font-semibold">Foto del medidor</h2>
+      <p className="mt-1 text-sm text-slate-600">
+        Cada lectura puede llevar una foto del medidor y la ubicación GPS. Las ves en Lecturas y en el Mapa.
+      </p>
+      <label className="mt-3 flex items-center gap-2">
+        <input type="checkbox" className="size-5" checked={config.foto_obligatoria} disabled={guardando} onChange={(e) => void cambiar(e.target.checked)} />
+        <span>Exigir foto en cada lectura</span>
+      </label>
       {estado && (
         <Aviso tono={estado.tono} className="mt-3">
           {estado.texto}

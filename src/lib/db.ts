@@ -29,16 +29,27 @@ export type LecturaLocal = {
   mensaje: string | null;
   enviada_at: string | null;
   intentos: number;
+  // Ubicación y foto (lecturas cargadas antes de esta versión no las tienen)
+  latitud?: number | null;
+  longitud?: number | null;
+  precision_gps?: number | null;
+  tiene_foto?: boolean;
+  /** true mientras falte subir la foto o mandar la ubicación */
+  extras_pendientes?: boolean;
 };
 
+/** Foto del medidor guardada en el celular hasta que se sube. */
+export type FotoLocal = { lectura_id: string; blob: Blob; creada_at: string };
+
 export type Meta =
-  | { clave: 'descarga'; operador_id: string; periodo: Periodo | null; umbral: number; fecha: string; cantidad: number }
+  | { clave: 'descarga'; operador_id: string; periodo: Periodo | null; umbral: number; foto_obligatoria?: boolean; localidad?: string; fecha: string; cantidad: number }
   | { clave: 'sincronizacion'; fecha: string | null; error: string | null };
 
 export class BaseLocal extends Dexie {
   cuentas!: EntityTable<CuentaLocal, 'id'>;
   lecturas!: EntityTable<LecturaLocal, 'id'>;
   meta!: Table<Meta, string>;
+  fotos!: EntityTable<FotoLocal, 'lectura_id'>;
 
   constructor() {
     super('lecturas-medidores');
@@ -47,6 +58,7 @@ export class BaseLocal extends Dexie {
       lecturas: 'id, estado, operador_id, [periodo_id+cuenta_id], [operador_id+estado]',
       meta: 'clave',
     });
+    this.version(2).stores({ fotos: 'lectura_id' });
   }
 }
 

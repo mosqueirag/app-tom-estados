@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fmtFechaHora, fmtNumero } from '@/lib/formato';
+import { VerFoto } from '@/components/VerFoto';
+import { linkMapa } from '@/lib/ubicacion';
 import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Insignia, Paginador, Tarjeta } from '@/components/ui';
@@ -36,6 +38,7 @@ const POR_PAGINA = 50;
 export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLecturas; periodoActivo: boolean }) {
   const [pagina, setPagina] = useState(0);
   const [corrigiendo, setCorrigiendo] = useState<VLectura | null>(null);
+  const [foto, setFoto] = useState<VLectura | null>(null);
   const clave = JSON.stringify(filtros);
   const [claveAnterior, setClaveAnterior] = useState(clave);
   if (clave !== claveAnterior) {
@@ -71,6 +74,7 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
                 <th>Operador</th>
                 <th>Fecha</th>
                 <th>Alertas</th>
+                <th>Foto y lugar</th>
                 <th></th>
               </tr>
             </thead>
@@ -99,6 +103,25 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
                       )}
                     </div>
                   </td>
+                  <td className="whitespace-nowrap">
+                    {l.foto_path && (
+                      <button className="boton-chico mr-1" onClick={() => setFoto(l)}>
+                        Foto
+                      </button>
+                    )}
+                    {l.latitud !== null && l.longitud !== null && (
+                      <a
+                        className="boton-chico"
+                        href={linkMapa(l)}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={l.precision_gps ? `Precisión ±${Math.round(l.precision_gps)} m` : undefined}
+                      >
+                        Mapa
+                      </a>
+                    )}
+                    {!l.foto_path && l.latitud === null && <span className="text-xs text-slate-400">—</span>}
+                  </td>
                   <td className="text-right">
                     <button className="boton-chico" onClick={() => setCorrigiendo(l)}>
                       {periodoActivo ? 'Corregir' : 'Ver'}
@@ -108,7 +131,7 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
               ))}
               {lista.datos?.filas.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-slate-500">
+                  <td colSpan={10} className="py-8 text-center text-slate-500">
                     No hay lecturas con estos filtros.
                   </td>
                 </tr>
@@ -120,6 +143,7 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
       <div className="px-4 pb-4">
         <Paginador pagina={pagina} porPagina={POR_PAGINA} total={lista.datos?.total ?? 0} alCambiar={setPagina} />
       </div>
+      <VerFoto titulo={foto ? `Cuenta ${foto.numero_cuenta} · ${fmtFechaHora(foto.fecha_lectura)}` : ''} path={foto?.foto_path ?? null} alCerrar={() => setFoto(null)} />
       <CorregirLectura
         lectura={corrigiendo}
         editable={periodoActivo}

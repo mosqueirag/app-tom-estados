@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { db, leerDescarga, type CuentaLocal, type LecturaLocal } from './db';
 import { mensajeError, traerTodo } from './consultas';
+import { BUCKET_FOTOS, rutaFoto } from './fotos';
 import type { LecturaParaSincronizar } from '@/types/database';
 
 const LOTE = 100;
@@ -42,6 +43,7 @@ async function hacerSincronizacion(operadorId: string): Promise<ResultadoSync> {
   const r: ResultadoSync = { enviadas: 0, conflictos: 0, rechazadas: 0, error: null };
   const pendientes = await db.lecturas.where({ operador_id: operadorId, estado: 'pendiente' }).sortBy('fecha_lectura');
   if (!pendientes.length) {
+    if (navigator.onLine) await enviarExtras(operadorId).catch(() => undefined);
     await guardarEstadoSync(null);
     return r;
   }
@@ -89,12 +91,57 @@ async function hacerSincronizacion(operadorId: string): Promise<ResultadoSync> {
         }
       });
     }
+    await enviarExtras(operadorId);
     await guardarEstadoSync(null);
   } catch (e) {
     r.error = esErrorDeConexion(e) ? 'Sin conexión con el servidor. Se reintenta solo.' : mensajeError(e);
     await guardarEstadoSync(r.error);
   }
   return r;
+}
+
+/**
+ * Sube las fotos y manda la ubicación de las lecturas que ya llegaron al
+ * servidor. Si una foto no se puede subir, queda para la próxima vez.
+ */
+async function enviarExtras(operadorId: string) {
+  const conExtras = (await db.lecturas.where('operador_id').equals(operadorId).toArray()).filter(
+    (l) => l.extras_pendientes && (l.estado === 'enviada' || l.estado === 'conflicto'),
+  );
+  if (!conExtras.length) return;
+
+  const listos: { lectura: LecturaLocal; item: { id: string; latitud: number | null; longitud: number | null; precision: number | null; foto_path: string | null } }[] = [];
+  for (const l of conExtras) {
+    let fotoPath: string | null = null;
+    if (l.tiene_foto) {
+      const foto = await db.fotos.get(l.id);
+      if (foto) {
+        fotoPath = rutaFoto(operadorId, l.id);
+        const { error } = await supabase.storage
+          .from(BUCKET_FOTOS)
+          .upload(fotoPath, foto.blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '31536000' });
+        if (error) {
+          if (esErrorDeConexion(error)) throw error;
+          continue; // se reintenta en la próxima sincronización
+        }
+      }
+    }
+    listos.push({
+      lectura: l,
+      item: { id: l.id, latitud: l.latitud ?? null, longitud: l.longitud ?? null, precision: l.precision_gps ?? null, foto_path: fotoPath },
+    });
+  }
+  for (let i = 0; i < listos.length; i += LOTE) {
+    const lote = listos.slice(i, i + LOTE);
+    const { error } = await supabase.rpc('registrar_extras_lecturas', { p_extras: lote.map((x) => x.item) });
+    if (error) throw error;
+    await db.transaction('rw', db.lecturas, db.fotos, async () => {
+      for (const { lectura } of lote) {
+        await db.lecturas.update(lectura.id, { extras_pendientes: false });
+        await db.fotos.delete(lectura.id);
+      }
+    });
+  }
 }
 
 /**
@@ -107,7 +154,7 @@ export async function descargarCuentas(operadorId: string): Promise<{ cantidad: 
 
   const [{ data: periodo, error: e1 }, { data: config, error: e2 }] = await Promise.all([
     supabase.from('periodos').select('*').eq('activo', true).maybeSingle(),
-    supabase.from('configuracion').select('umbral_consumo_anomalo').eq('id', 1).maybeSingle(),
+    supabase.from('configuracion').select('umbral_consumo_anomalo, foto_obligatoria').eq('id', 1).maybeSingle(),
   ]);
   if (e1) throw e1;
   if (e2) throw e2;
@@ -169,6 +216,7 @@ export async function descargarCuentas(operadorId: string): Promise<{ cantidad: 
       operador_id: operadorId,
       periodo: periodo ?? null,
       umbral: Number(config?.umbral_consumo_anomalo ?? 3),
+      foto_obligatoria: Boolean(config?.foto_obligatoria),
       fecha: new Date().toISOString(),
       cantidad: cuentas.length,
     });
@@ -177,12 +225,24 @@ export async function descargarCuentas(operadorId: string): Promise<{ cantidad: 
   return { cantidad: cuentas.length, periodo: periodo?.nombre ?? null };
 }
 
-/** Guarda una lectura confirmada en el celular con estado "pendiente". */
-export async function guardarLecturaLocal(l: Omit<LecturaLocal, 'estado' | 'mensaje' | 'enviada_at' | 'intentos'>) {
+/** Guarda una lectura confirmada en el celular con estado "pendiente" (y su foto, si hay una nueva). */
+export async function guardarLecturaLocal(l: Omit<LecturaLocal, 'estado' | 'mensaje' | 'enviada_at' | 'intentos'>, foto?: Blob | null) {
   const existente = await db.lecturas.where({ periodo_id: l.periodo_id, cuenta_id: l.cuenta_id }).filter((x) => x.operador_id === l.operador_id).first();
   if (existente && existente.id !== l.id) throw new Error('Esta cuenta ya fue leída en este período desde este celular.');
   if (existente && existente.estado !== 'pendiente') throw new Error('Esta lectura ya fue enviada y no se puede modificar desde el celular.');
-  await db.lecturas.put({ ...l, estado: 'pendiente', mensaje: null, enviada_at: null, intentos: 0 });
+  const tieneFoto = Boolean(foto) || Boolean(existente?.tiene_foto);
+  await db.transaction('rw', db.lecturas, db.fotos, async () => {
+    if (foto) await db.fotos.put({ lectura_id: l.id, blob: foto, creada_at: new Date().toISOString() });
+    await db.lecturas.put({
+      ...l,
+      tiene_foto: tieneFoto,
+      extras_pendientes: tieneFoto || l.latitud != null,
+      estado: 'pendiente',
+      mensaje: null,
+      enviada_at: null,
+      intentos: 0,
+    });
+  });
 }
 
 export { leerDescarga };

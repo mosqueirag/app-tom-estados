@@ -87,6 +87,7 @@ funciones. Están en la carpeta `supabase/migrations` y **hay que ejecutarlas en
    | 7 | `20260930000007_ajustes_seguridad.sql` |
    | 8 | `20260930000008_rutas_y_avisos.sql` |
    | 9 | `20260930000009_lecturas_en_vivo.sql` |
+   | 10 | `20260930000010_fotos_y_ubicacion.sql` |
 
 6. **Datos de ejemplo (opcional):** si querés probar la app con 10 cuentas de prueba y un
    período "Octubre 2026", ejecutá también `supabase/seed.sql`. Para uso real no hace falta:
@@ -296,6 +297,17 @@ de nuevo para ver los cambios.
 **Siempre que el admin le manda datos a un operador le llega un aviso:** al asignarle una ruta
 o una cuenta, al crear una cuenta en su ruta (a mano o por Excel) y al modificar una de sus
 cuentas.
+
+### Foto del medidor y ubicación
+
+Al cargar una lectura el operador puede sacar una foto del medidor (botón **Sacar foto**) y la
+app toma la ubicación GPS sola. Funciona sin señal: la foto queda en el celular y se sube al
+sincronizar (achicada, unos 100 KB). El admin ve la foto y el lugar en **Lecturas** (botones
+Foto y Mapa) y todas las lecturas del período en **Mapa**. En **Panel** se puede exigir la
+foto en cada lectura.
+
+Las fotos se guardan en Supabase Storage, en el bucket privado `fotos-medidores` (lo crea la
+migración 10). El plan gratis trae 1 GB: alcanza para unas 10.000 fotos.
 
 ### Lecturas en vivo
 

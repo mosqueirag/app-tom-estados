@@ -6,6 +6,7 @@ export type ValorSync = {
   pendientes: number;
   conflictos: number;
   rechazadas: number;
+  fotosPendientes: number;
   sincronizando: boolean;
   descargando: boolean;
   ultimoResultado: ResultadoSync | null;
