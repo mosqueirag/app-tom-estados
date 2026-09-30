@@ -381,17 +381,6 @@ pantalla de inicio de la app, y aceptar el permiso.
 - **Comparación de consumo** (en **Períodos**): consumo total por ruta contra el período
   anterior, con la diferencia y el porcentaje. Marca las rutas que cambiaron más de 20%.
 
-### Etiquetas QR y lector de códigos
-
-En **Cuentas → Etiquetas QR** se descarga un PDF con una etiqueta por cuenta (24 por hoja A4,
-de 70 × 37 mm) con el código QR, el número, el titular, la dirección y el medidor. Se imprime en
-hojas autoadhesivas y se pega en cada medidor. Usa el filtro de la pantalla: si elegís una ruta,
-salen solo esas.
-
-En el celular, **Buscar → Escanear** abre la cámara y lee el QR de la etiqueta (o el código de
-barras que traiga el medidor, si coincide con el número de medidor cargado) y abre la cuenta
-directamente. Funciona en Android y en iPhone.
-
 ---
 
 ## 11. Trabajo diario del operador
@@ -417,7 +406,6 @@ directamente. Funciona en Android y en iPhone.
 - **Nota de voz:** al cargar una lectura se puede grabar una nota de hasta un minuto en lugar
   de escribir la observación. Se sube al sincronizar y el admin la escucha en **Lecturas**
   (botón 🎙️ Nota) o en el **Mapa**. Se guarda en el bucket privado `notas-voz`.
-- **Escanear** el código QR del medidor para abrir la cuenta sin escribir (ver Etiquetas QR).
 - **Modo oscuro y letra grande:** en **Inicio → Pantalla**. Quedan guardados en ese celular.
 - **Aviso de batería baja:** si el celular tiene 20% o menos, no está cargando y hay lecturas
   sin enviar, aparece un aviso rojo arriba para que las envíe. **Solo en Android:** el iPhone

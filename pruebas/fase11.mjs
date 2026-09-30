@@ -1,4 +1,4 @@
-// Fase 11: pasar pendientes en un clic, etiquetas QR y lector de códigos.
+// Fase 11: pasar pendientes en un clic.
 import { createRequire } from 'module';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -88,22 +88,8 @@ psql(`set session_replication_role = replica;
       select gen_random_uuid(), '${PERIODO}', id, '${JUAN}', ultima_lectura, ultima_lectura + 10, now() from cuentas where numero_cuenta = '10001';`);
 psql('delete from auditoria');
 
-// Video falso para la cámara: un QR con "CUENTA:10003" (formato Y4M que entiende Chromium)
-function videoQr(texto, archivo) {
-  const QR = requireL('qrcode').create(texto, { errorCorrectionLevel: 'M' }).modules;
-  const W = 640, H = 480, px = 10, lado = QR.size * px, x0 = (W - lado) / 2, y0 = (H - lado) / 2;
-  const y = Buffer.alloc(W * H, 235);
-  for (let f = 0; f < QR.size; f++) for (let c = 0; c < QR.size; c++) if (QR.data[f * QR.size + c])
-    for (let dy = 0; dy < px; dy++) y.fill(16, (y0 + f * px + dy) * W + x0 + c * px, (y0 + f * px + dy) * W + x0 + c * px + px);
-  const uv = Buffer.alloc((W / 2) * (H / 2) * 2, 128);
-  const cuadro = Buffer.concat([Buffer.from('FRAME\n'), y, uv]);
-  fs.writeFileSync(archivo, Buffer.concat([Buffer.from(`YUV4MPEG2 W${W} H${H} F10:1 Ip A1:1 C420jpeg\n`), ...Array(5).fill(cuadro)]));
-}
-videoQr('CUENTA:10003', TMP + '/qr.y4m');
-
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-  args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', `--use-file-for-fake-video-capture=${TMP}/qr.y4m`] });
-let ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'es-AR', acceptDownloads: true });
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+let ctx = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: 'es-AR' });
 await ctx.route('http://supabase.test/**', mock);
 let page = await ctx.newPage();
 const errores = []; page.on('pageerror', (e) => errores.push(e.message));
@@ -133,21 +119,8 @@ await intentar('Admin pasa las pendientes de Juan a María', async () => {
   ok('Historial: registra el cambio con el nombre del admin', aud === '4|Guille Admin|cambio', aud);
 });
 
-await intentar('Admin descarga etiquetas QR', async () => {
-  await page.getByRole('navigation').getByRole('link', { name: 'Cuentas' }).click();
-  await main.locator('tbody tr').first().waitFor();
-  await main.getByLabel('Filtrar por ruta').selectOption('Ruta 1');
-  await main.locator('tbody tr', { hasText: '10005' }).waitFor();
-  const [descarga] = await Promise.all([page.waitForEvent('download'), main.getByRole('button', { name: 'Etiquetas QR' }).click()]);
-  const pdf = fs.readFileSync(await descarga.path()).toString('latin1');
-  ok('Etiquetas QR: nombre con la ruta', descarga.suggestedFilename() === 'etiquetas_qr_ruta_1.pdf', descarga.suggestedFilename());
-  ok('Etiquetas QR: una por cuenta de la ruta', ['10001', '10002', '10003', '10004', '10005'].every((n) => pdf.includes(`(${n})`)) && !pdf.includes('(10006)'));
-  ok('Etiquetas QR: con imágenes de los códigos', (pdf.match(/\/Subtype \/Image/g) ?? []).length === 5);
-  await main.getByText('Se descargaron 5 etiquetas').waitFor();
-});
-
 await ctx.close();
-ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'es-AR', hasTouch: true, isMobile: true, permissions: ['camera'] });
+ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'es-AR', hasTouch: true, isMobile: true });
 await ctx.route('http://supabase.test/**', mock);
 page = await ctx.newPage(); main = page.locator('main');
 page.on('pageerror', (e) => errores.push(e.message));
@@ -158,15 +131,11 @@ await main.getByRole('button', { name: 'Descargar cuentas' }).click();
 await main.getByText(/Listo: \d+ cuentas guardadas/).waitFor();
 ok('María descarga las cuentas que le pasaron', true);
 
-await intentar('Operador escanea el QR del medidor', async () => {
+await intentar('María ve las cuentas que le pasaron', async () => {
   await page.getByRole('navigation').getByRole('link', { name: 'Buscar' }).dispatchEvent('click');
-  await main.getByRole('button', { name: 'Escanear código' }).click();
-  await page.getByRole('dialog').getByLabel('Imagen de la cámara').waitFor();
-  if (CAPT) await page.screenshot({ path: CAPT + '/escanear.png' });
-  await page.waitForURL(/\/operador\/cuenta\//, { timeout: 15000 });
-  const id = psql("select id from cuentas where numero_cuenta = '10003'");
-  ok('Escanear: abre la cuenta del QR', page.url().endsWith('/operador/cuenta/' + id), page.url());
-  await main.getByText('10003').first().waitFor();
+  await main.getByLabel('Buscar cuenta').fill('10003');
+  await main.getByRole('link', { name: /10003/ }).waitFor();
+  ok('Buscar: la cuenta pasada está en su celular', true);
 });
 
 ok('Sin errores de JavaScript', errores.length === 0, errores.join(' | '));
