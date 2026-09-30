@@ -10,6 +10,17 @@
 //   No cambia nada: avisa a cada operador de esas cuentas que tiene datos
 //   nuevos para descargar (cuentas creadas o modificadas por el admin).
 //
+// Body: { reasignar_de: uuid, operador_id: uuid }
+//   Pasa a operador_id las cuentas que reasignar_de todavía no leyó en el
+//   período abierto (por ejemplo, si faltó) y le avisa al que las recibe.
+//
+// Body: { mensaje: string, para_id: uuid | null }
+//   Guarda un mensaje corto para un operador (o para todos si para_id es
+//   null) y se lo manda como notificación push.
+//
+// Los cambios en cuentas y mensajes se hacen con la sesión del admin (no con
+// service_role) para que el historial de cambios registre quién los hizo.
+//
 // Archivo autocontenido: se puede pegar tal cual en el editor de Edge Functions
 // del panel de Supabase, o publicar con `npx supabase functions deploy`.
 import { createClient, type SupabaseClient, type User } from 'jsr:@supabase/supabase-js@2';
@@ -42,10 +53,11 @@ class ErrorHttp extends Error {
   }
 }
 
-async function exigirAdmin(req: Request): Promise<{ admin: User; servicio: SupabaseClient }> {
+async function exigirAdmin(req: Request): Promise<{ admin: User; servicio: SupabaseClient; usuario: SupabaseClient }> {
   const url = Deno.env.get('SUPABASE_URL');
   const serviceRole = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!url || !serviceRole) throw new ErrorHttp(500, 'La función no está configurada (faltan variables de entorno).');
+  const anon = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!url || !serviceRole || !anon) throw new ErrorHttp(500, 'La función no está configurada (faltan variables de entorno).');
 
   const token = req.headers.get('Authorization')?.replace(/^Bearer\s+/i, '');
   if (!token) throw new ErrorHttp(401, 'Tenés que iniciar sesión.');
@@ -62,7 +74,12 @@ async function exigirAdmin(req: Request): Promise<{ admin: User; servicio: Supab
   if (perfilError) throw new ErrorHttp(500, 'No se pudo verificar tu perfil.');
   if (!perfil || perfil.rol !== 'admin' || !perfil.activo) throw new ErrorHttp(403, 'Solo un administrador puede hacer esto.');
 
-  return { admin: userData.user, servicio };
+  // Cliente con la sesión del admin: respeta RLS y deja su nombre en la auditoría
+  const usuario = createClient(url, anon, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  return { admin: userData.user, servicio, usuario };
 }
 
 // ------------------------------------------------------------ Avisos push
@@ -155,15 +172,138 @@ async function avisarCambios(servicio: SupabaseClient, body: Record<string, unkn
   return json({ avisos_enviados: enviados, mensaje: partes.join(' ') });
 }
 
+async function operadorActivo(servicio: SupabaseClient, id: string): Promise<{ nombre: string } | Response> {
+  const { data: op } = await servicio.from('perfiles').select('nombre, activo, rol').eq('id', id).maybeSingle();
+  if (!op) return error('El operador no existe.', 404);
+  if (!op.activo) return error(`${op.nombre} está desactivado. Activalo antes de asignarle cuentas.`);
+  return { nombre: op.nombre };
+}
+
+function detalleAviso(r: { enviados: number; celulares: number; motivo: string | null }, nombre: string): string {
+  if (r.motivo) return r.motivo;
+  if (!r.celulares) return `${nombre} todavía no activó los avisos en su celular: avisale vos.`;
+  if (!r.enviados) return `No se pudo avisar a ${nombre} en su celular.`;
+  return `Se avisó a ${nombre} en su celular.`;
+}
+
+// Pasa las cuentas pendientes de un operador a otro.
+async function reasignarPendientes(servicio: SupabaseClient, usuario: SupabaseClient, body: Record<string, unknown>): Promise<Response> {
+  const de = String(body.reasignar_de ?? '');
+  const a = String(body.operador_id ?? '');
+  if (!UUID.test(de) || !UUID.test(a)) return error('Operador inválido.');
+  if (de === a) return error('Elegí otro operador.');
+
+  const destino = await operadorActivo(servicio, a);
+  if (destino instanceof Response) return destino;
+  const { data: origen } = await servicio.from('perfiles').select('nombre').eq('id', de).maybeSingle();
+  const nombreOrigen = origen?.nombre ?? 'el operador';
+
+  const { data: periodo } = await servicio.from('periodos').select('id').eq('activo', true).maybeSingle();
+  if (!periodo) return error('No hay un período abierto.');
+
+  const ids: string[] = [];
+  for (let desde = 0; ; desde += 1000) {
+    const { data, error: e } = await usuario
+      .rpc('cuentas_pendientes', { p_periodo_id: periodo.id })
+      .select('id, operador_id') // PostgREST solo filtra por columnas elegidas
+      .eq('operador_id', de)
+      .range(desde, desde + 999);
+    if (e) return error(`No se pudieron buscar las pendientes: ${e.message}`, 500);
+    const lista = (data ?? []) as unknown as { id: string }[];
+    ids.push(...lista.map((c) => c.id));
+    if (lista.length < 1000) break;
+  }
+  if (!ids.length) return json({ actualizadas: 0, mensaje: `${nombreOrigen} no tiene cuentas pendientes.` });
+
+  let cantidad = 0;
+  for (let i = 0; i < ids.length; i += 300) {
+    const { data, error: e } = await usuario
+      .from('cuentas')
+      .update({ operador_id: a })
+      .in('id', ids.slice(i, i + 300))
+      .eq('operador_id', de)
+      .select('id');
+    if (e) return error(`No se pudieron pasar las cuentas: ${e.message}`, 500);
+    cantidad += data?.length ?? 0;
+  }
+
+  const r = await enviarAvisos(servicio, a, {
+    titulo: 'Tenés cuentas nuevas para leer',
+    cuerpo: `Te pasaron ${plural(cantidad, 'cuenta pendiente', 'cuentas pendientes')} de ${nombreOrigen}. Tocá para descargarlas.`,
+    url: '/operador?descargar=1',
+    tag: 'asignacion',
+  });
+  return json({
+    actualizadas: cantidad,
+    avisos_enviados: r.enviados,
+    mensaje: `Se pasaron ${plural(cantidad, 'cuenta pendiente', 'cuentas pendientes')} de ${nombreOrigen} a ${destino.nombre}. ${detalleAviso(r, destino.nombre)}`,
+  });
+}
+
+// Mensaje corto del admin a un operador o a todos.
+async function mandarMensaje(servicio: SupabaseClient, usuario: SupabaseClient, admin: User, body: Record<string, unknown>): Promise<Response> {
+  const texto = String(body.mensaje ?? '').trim();
+  const para = body.para_id ? String(body.para_id) : null;
+  if (!texto) return error('Escribí el mensaje.');
+  if (texto.length > 500) return error('El mensaje es muy largo (máximo 500 letras).');
+  if (para && !UUID.test(para)) return error('Operador inválido.');
+
+  let destinatarios: { id: string; nombre: string }[];
+  if (para) {
+    const op = await operadorActivo(servicio, para);
+    if (op instanceof Response) return op;
+    destinatarios = [{ id: para, nombre: op.nombre }];
+  } else {
+    const { data } = await servicio.from('perfiles').select('id, nombre').eq('rol', 'operador').eq('activo', true);
+    destinatarios = (data ?? []) as { id: string; nombre: string }[];
+  }
+
+  const { data: guardado, error: e } = await usuario
+    .from('mensajes')
+    .insert({ autor_id: admin.id, para_id: para, texto })
+    .select('id, created_at')
+    .single();
+  if (e) return error(`No se pudo guardar el mensaje: ${e.message}`, 500);
+
+  const avisados: string[] = [];
+  const sinAvisos: string[] = [];
+  let enviados = 0;
+  let motivo: string | null = null;
+  for (const d of destinatarios) {
+    const r = await enviarAvisos(servicio, d.id, {
+      titulo: 'Mensaje del administrador',
+      cuerpo: texto.length > 180 ? `${texto.slice(0, 177)}...` : texto,
+      url: '/operador?mensajes=1',
+      tag: `mensaje-${guardado.id}`,
+    });
+    motivo ??= r.motivo;
+    enviados += r.enviados;
+    (r.enviados ? avisados : sinAvisos).push(d.nombre);
+  }
+
+  let detalle: string;
+  if (motivo) detalle = motivo;
+  else if (!destinatarios.length) detalle = 'No hay operadores activos.';
+  else {
+    const partes: string[] = [];
+    if (avisados.length) partes.push(`Les llegó al celular a ${avisados.join(', ')}.`);
+    if (sinAvisos.length) partes.push(`${sinAvisos.join(', ')} no tiene${sinAvisos.length === 1 ? '' : 'n'} los avisos activados: lo ve${sinAvisos.length === 1 ? '' : 'n'} al abrir la app.`);
+    detalle = partes.join(' ');
+  }
+  return json({ id: guardado.id, avisos_enviados: enviados, mensaje: `Mensaje enviado. ${detalle}` });
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return error('Método no permitido.', 405);
 
   try {
-    const { servicio } = await exigirAdmin(req);
+    const { admin, servicio, usuario } = await exigirAdmin(req);
     const body = await req.json().catch(() => null);
 
     if (body?.avisar) return await avisarCambios(servicio, body);
+    if (body?.reasignar_de) return await reasignarPendientes(servicio, usuario, body);
+    if (typeof body?.mensaje === 'string') return await mandarMensaje(servicio, usuario, admin, body);
 
     const operadorId = body?.operador_id ? String(body.operador_id) : null;
     const rutas: string[] | null = Array.isArray(body?.rutas)
@@ -179,13 +319,12 @@ Deno.serve(async (req) => {
 
     let operadorNombre = '';
     if (operadorId) {
-      const { data: op } = await servicio.from('perfiles').select('nombre, activo').eq('id', operadorId).maybeSingle();
-      if (!op) return error('El operador no existe.', 404);
-      if (!op.activo) return error(`${op.nombre} está desactivado. Activalo antes de asignarle cuentas.`);
+      const op = await operadorActivo(servicio, operadorId);
+      if (op instanceof Response) return op;
       operadorNombre = op.nombre;
     }
 
-    let consulta = servicio.from('cuentas').update({ operador_id: operadorId });
+    let consulta = usuario.from('cuentas').update({ operador_id: operadorId });
     if (rutas !== null && rutas.length > 1 && rutas.includes('')) return error('Asigná las cuentas sin ruta por separado.');
     if (rutas === null) consulta = consulta.in('id', cuentaIds);
     else consulta = (rutas.length === 1 ? consulta.eq('ruta', rutas[0]) : consulta.in('ruta', rutas)).eq('activa', true);
@@ -216,11 +355,7 @@ Deno.serve(async (req) => {
     };
     const r = await enviarAvisos(servicio, operadorId, aviso);
 
-    let detalle: string;
-    if (r.motivo) detalle = r.motivo;
-    else if (!r.celulares) detalle = `${operadorNombre} todavía no activó los avisos en su celular: avisale vos.`;
-    else if (!r.enviados) detalle = `No se pudo avisar a ${operadorNombre} en su celular.`;
-    else detalle = `Se avisó a ${operadorNombre} en su celular.`;
+    const detalle = detalleAviso(r, operadorNombre);
 
     return json({
       actualizadas: cantidad,

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { mensajeError, traerTodo } from '@/lib/consultas';
 import { fmtFecha, fmtNumero } from '@/lib/formato';
 import { descargarPlantillaCuentas, exportarCuentas } from '@/lib/excel';
+import { descargarEtiquetasQr } from '@/lib/etiquetasQr';
 import { useConsulta, useDemorado } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Encabezado, Insignia, Paginador, Tarjeta } from '@/components/ui';
 import type { Cuenta } from '@/types/database';
@@ -72,6 +73,27 @@ export default function Cuentas() {
     }
   }
 
+  // Etiquetas de las cuentas que muestra el filtro actual (todas las páginas)
+  async function etiquetas() {
+    try {
+      const todas = await traerTodo<Cuenta>((d, h) => {
+        let consulta = supabase.from('cuentas').select('*');
+        if (filtro !== 'todas') consulta = consulta.eq('activa', filtro === 'activas');
+        if (ruta !== TODAS_LAS_RUTAS) consulta = consulta.eq('ruta', ruta);
+        if (q) consulta = consulta.or(`numero_cuenta.ilike.%${q}%,titular.ilike.%${q}%,direccion.ilike.%${q}%,medidor.ilike.%${q}%`);
+        return consulta.order('ruta').order('orden', { nullsFirst: false }).order('numero_cuenta').range(d, h);
+      });
+      if (!todas.length) {
+        setMensaje({ tono: 'error', texto: 'No hay cuentas con este filtro.' });
+        return;
+      }
+      await descargarEtiquetasQr(todas, ruta !== TODAS_LAS_RUTAS && ruta ? `etiquetas_qr_${ruta.toLowerCase().replace(/\s+/g, '_')}` : 'etiquetas_qr');
+      setMensaje({ tono: 'exito', texto: `Se descargaron ${fmtNumero(todas.length)} etiquetas con código QR (24 por hoja A4).` });
+    } catch (e) {
+      setMensaje({ tono: 'error', texto: mensajeError(e) });
+    }
+  }
+
   async function exportar() {
     try {
       const todas = await traerTodo<Cuenta>((d, h) => supabase.from('cuentas').select('*').order('numero_cuenta').range(d, h));
@@ -92,6 +114,9 @@ export default function Cuentas() {
         </button>
         <button className="boton-chico" onClick={() => setImportando(true)}>
           Importar Excel
+        </button>
+        <button className="boton-chico" onClick={() => void etiquetas()} title="PDF con un código QR por cuenta, para pegar en el medidor">
+          Etiquetas QR
         </button>
         <button className="boton-primario min-h-9 px-4 text-sm" onClick={() => setEditando('nueva')}>
           Nueva cuenta

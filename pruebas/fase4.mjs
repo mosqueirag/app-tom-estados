@@ -183,7 +183,7 @@ await intentar('Vuelve la señal', async () => {
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await page.waitForFunction(() => document.querySelector('header [role=status]')?.textContent === 'En línea · todo enviado', null, { timeout: 15000 });
   ok('Al volver la señal se sincroniza solo', nLect() === '4');
-  ok('Datos en el servidor', psql("select string_agg(c.numero_cuenta||'='||coalesce(l.lectura_actual::text,'SL:'||l.observacion), ' ' order by 1) from lecturas l join cuentas c on c.id=l.cuenta_id where l.operador_id='bbbbbbbb-0000-0000-0000-000000000002'") === '10001=15262.500 10003=SL:Perro 10004=3200.000 10010=120.000');
+  ok('Datos en el servidor', psql("select string_agg(c.numero_cuenta||'='||coalesce(l.lectura_actual::text,'SL:'||l.observacion), ' ' order by c.numero_cuenta) from lecturas l join cuentas c on c.id=l.cuenta_id where l.operador_id='bbbbbbbb-0000-0000-0000-000000000002'") === '10001=15262.500 10003=SL:Perro 10004=3200.000 10010=120.000', psql("select string_agg(c.numero_cuenta||'='||coalesce(l.lectura_actual::text,'SL:'||l.observacion), ' ' order by c.numero_cuenta) from lecturas l join cuentas c on c.id=l.cuenta_id where l.operador_id='bbbbbbbb-0000-0000-0000-000000000002'"));
 });
 
 await intentar('Idempotencia', async () => {

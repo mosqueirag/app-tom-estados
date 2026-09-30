@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { supabase } from '@/lib/supabase';
 import { llamarFuncion } from '@/lib/consultas';
 import { config } from '@/lib/config';
@@ -16,6 +16,7 @@ export default function Operadores() {
   const [creando, setCreando] = useState(false);
   const [reseteando, setReseteando] = useState<VOperador | null>(null);
   const [asignandoRutas, setAsignandoRutas] = useState<VOperador | null>(null);
+  const [pasando, setPasando] = useState<VOperador | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
   const [trabajando, setTrabajando] = useState<string | null>(null);
 
@@ -105,6 +106,11 @@ export default function Operadores() {
                     <td className="text-right tabular-nums">{fmtNumero(o.lecturas_total)}</td>
                     <td className="whitespace-nowrap">{fmtFechaHora(o.ultima_lectura_at)}</td>
                     <td className="whitespace-nowrap text-right">
+                      {o.rol === 'operador' && (
+                        <button className="boton-chico mr-2" onClick={() => setPasando(o)} aria-label={`Pasar pendientes de ${o.nombre}`}>
+                          Pasar pendientes
+                        </button>
+                      )}
                       <button className="boton-chico mr-2" onClick={() => setReseteando(o)}>
                         Resetear contraseña
                       </button>
@@ -137,6 +143,16 @@ export default function Operadores() {
         alCerrar={() => setAsignandoRutas(null)}
         alGuardar={(texto) => {
           setAsignandoRutas(null);
+          setMensaje({ tono: 'exito', texto });
+          void rutas.recargar();
+        }}
+      />
+      <PasarPendientes
+        operador={pasando}
+        operadores={lista.datos ?? []}
+        alCerrar={() => setPasando(null)}
+        alGuardar={(texto) => {
+          setPasando(null);
           setMensaje({ tono: 'exito', texto });
           void rutas.recargar();
         }}
@@ -388,6 +404,106 @@ function AsignarRutas({
           <button type="submit" className="boton-primario" disabled={guardando || rutas.length === 0}>
             {guardando ? 'Guardando…' : 'Guardar'}
           </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/** Pasa a otro operador las cuentas que este todavía no leyó (por ejemplo, si faltó). */
+function PasarPendientes({
+  operador,
+  operadores,
+  alCerrar,
+  alGuardar,
+}: {
+  operador: VOperador | null;
+  operadores: VOperador[];
+  alCerrar: () => void;
+  alGuardar: (m: string) => void;
+}) {
+  const [destino, setDestino] = useState('');
+  const [pendientes, setPendientes] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const opciones = operadores.filter((o) => o.activo && o.rol === 'operador' && o.id !== operador?.id);
+
+  useEffect(() => {
+    setDestino('');
+    setPendientes(null);
+    setError(null);
+    if (!operador) return;
+    let vigente = true;
+    void (async () => {
+      const { data: periodo } = await supabase.from('periodos').select('id').eq('activo', true).maybeSingle();
+      if (!periodo) {
+        if (vigente) setError('No hay un período abierto.');
+        return;
+      }
+      const { count, error: e } = await supabase
+        .rpc('cuentas_pendientes', { p_periodo_id: periodo.id }, { count: 'exact', head: true })
+        .eq('operador_id', operador.id);
+      if (!vigente) return;
+      if (e) setError(e.message);
+      else setPendientes(count ?? 0);
+    })();
+    return () => {
+      vigente = false;
+    };
+  }, [operador]);
+
+  async function pasar(e: FormEvent) {
+    e.preventDefault();
+    if (!operador || !destino) return;
+    setGuardando(true);
+    setError(null);
+    try {
+      const r = await llamarFuncion<{ mensaje: string }>('asignar-cuentas', { reasignar_de: operador.id, operador_id: destino });
+      alGuardar(r.mensaje);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Modal titulo={`Pasar pendientes de ${operador?.nombre ?? ''}`} abierto={operador !== null} alCerrar={alCerrar}>
+      <form onSubmit={pasar} className="space-y-4">
+        {pendientes === null && !error ? (
+          <Cargando />
+        ) : pendientes === 0 ? (
+          <p className="text-slate-600">{operador?.nombre} no tiene cuentas pendientes en el período abierto.</p>
+        ) : pendientes !== null ? (
+          <>
+            <p className="text-slate-600">
+              {operador?.nombre} tiene <strong>{fmtNumero(pendientes)}</strong> {pendientes === 1 ? 'cuenta pendiente' : 'cuentas pendientes'} en el período
+              abierto. Las que ya leyó se quedan con él.
+            </p>
+            <label className="block">
+              <span className="etiqueta">Pasárselas a</span>
+              <select className="campo" value={destino} onChange={(e) => setDestino(e.target.value)}>
+                <option value="">Elegí un operador</option>
+                {opciones.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.nombre}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-xs text-slate-500">Al que las recibe le llega un aviso al celular para descargarlas.</p>
+          </>
+        ) : null}
+        {error && <Aviso tono="error">{error}</Aviso>}
+        <div className="flex justify-end gap-2">
+          <button type="button" className="boton-secundario" onClick={alCerrar}>
+            Cancelar
+          </button>
+          {!!pendientes && (
+            <button type="submit" className="boton-primario" disabled={guardando || !destino}>
+              {guardando ? 'Pasando…' : `Pasar ${pendientes === 1 ? 'la cuenta' : `${fmtNumero(pendientes)} cuentas`}`}
+            </button>
+          )}
         </div>
       </form>
     </Modal>

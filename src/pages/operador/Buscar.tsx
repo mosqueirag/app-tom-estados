@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type EstadoLecturaLocal } from '@/lib/db';
 import { fmtNumero } from '@/lib/formato';
@@ -7,6 +7,7 @@ import { normalizar } from '@/lib/texto';
 import { useAuth } from '@/auth/contexto';
 import { useSync } from '@/sync/contexto';
 import { Aviso, Insignia } from '@/components/ui';
+import { EscanearCodigo, cuentaPorCodigo } from '@/components/EscanearCodigo';
 
 type Filtro = 'pendientes' | 'leidas' | 'todas';
 const MAXIMO = 100;
@@ -25,6 +26,9 @@ export default function Buscar() {
   const guardada = (ubicacion.state as { guardada?: string } | null)?.guardada;
   const [q, setQ] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('pendientes');
+  const [escaneando, setEscaneando] = useState(false);
+  const [noEncontrado, setNoEncontrado] = useState<string | null>(null);
+  const navegar = useNavigate();
   const operadorId = auth.estado === 'con_sesion' ? auth.perfil.id : '';
   const periodoId = descarga?.periodo?.id ?? '';
 
@@ -64,19 +68,42 @@ export default function Buscar() {
 
   const totalLeidas = leidas?.size ?? 0;
 
+  function alLeerCodigo(codigo: string) {
+    setEscaneando(false);
+    const encontradas = cuentaPorCodigo(cuentas ?? [], codigo);
+    if (encontradas.length === 1) {
+      navegar(`/operador/cuenta/${encontradas[0].id}`);
+      return;
+    }
+    const texto = codigo.replace(/^CUENTA:/i, '');
+    setFiltro('todas');
+    setQ(encontradas.length ? texto : '');
+    setNoEncontrado(encontradas.length ? null : texto);
+  }
+
   return (
     <div className="space-y-3">
       {guardada && <Aviso tono="exito">Lectura de la cuenta {guardada} guardada.</Aviso>}
       {!descarga.periodo && <Aviso tono="alerta">No hay un período abierto: no se pueden cargar lecturas.</Aviso>}
-      <input
-        className="campo text-lg"
-        type="search"
-        placeholder="N° de cuenta, medidor, dirección o titular"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        autoFocus
-        aria-label="Buscar cuenta"
-      />
+      <div className="flex gap-2">
+        <input
+          className="campo text-lg"
+          type="search"
+          placeholder="N° de cuenta, medidor, dirección o titular"
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setNoEncontrado(null);
+          }}
+          autoFocus
+          aria-label="Buscar cuenta"
+        />
+        <button type="button" className="boton-secundario shrink-0 px-3" onClick={() => setEscaneando(true)} aria-label="Escanear código">
+          <span aria-hidden>📷</span> Escanear
+        </button>
+      </div>
+      {noEncontrado && <Aviso tono="alerta">El código “{noEncontrado}” no coincide con ninguna cuenta ni medidor que tengas descargado.</Aviso>}
+      <EscanearCodigo abierto={escaneando} alCerrar={() => setEscaneando(false)} alLeer={alLeerCodigo} />
       <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-200 p-1">
         {(
           [
