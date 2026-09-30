@@ -44,7 +44,7 @@ export default function OperadorLayout() {
 
       {/* Navegación inferior: botones grandes, al alcance del pulgar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-10 mx-auto grid max-w-lg grid-cols-4 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-0 z-10 mx-auto grid max-w-lg grid-cols-5 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]"
         aria-label="Navegación"
       >
         {PESTANIAS.map((p) => (
