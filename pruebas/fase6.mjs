@@ -53,8 +53,10 @@ async function mock(route) {
   // asignar-cuentas simulada: hace el mismo UPDATE que la función real (sin push)
   if (url.pathname === '/functions/v1/asignar-cuentas') {
     const b = req.postDataJSON(); llamadas.push(b);
+    if (b.avisar) return json(route, 200, { avisos_enviados: 0, mensaje: `Aviso ${b.avisar} de ${b.cuenta_ids.length}.` });
+    if (b.rutas) b.ruta = b.rutas.join("','");
     const op = b.operador_id ? `'${b.operador_id}'` : 'null';
-    const donde = b.ruta !== undefined ? `ruta='${b.ruta}' and activa` : `id in (${b.cuenta_ids.map((i) => `'${i}'`).join(',')})`;
+    const donde = b.ruta !== undefined ? `ruta in ('${b.ruta}') and activa` : `id in (${b.cuenta_ids.map((i) => `'${i}'`).join(',')})`;
     const n = psql(`with u as (update cuentas set operador_id=${op} where ${donde} returning 1) select count(*) from u`);
     return json(route, 200, { actualizadas: Number(n), mensaje: `Se asignaron ${n} cuentas.` });
   }

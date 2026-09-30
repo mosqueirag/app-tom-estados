@@ -6,12 +6,13 @@ import { Aviso, Modal } from '@/components/ui';
 import type { Cuenta } from '@/types/database';
 
 export type OperadorOpcion = { id: string; nombre: string };
+export type RutaOpcion = { ruta: string; operador_id: string | null };
 
 type Props = {
   cuenta: Cuenta | 'nueva' | null;
   periodoAbierto: string | null;
   operadores: OperadorOpcion[];
-  rutas: string[];
+  rutas: RutaOpcion[];
   alCerrar: () => void;
   alGuardar: (mensaje: string) => void;
 };
@@ -23,9 +24,12 @@ export function FormularioCuenta({ cuenta, periodoAbierto, operadores, rutas, al
   const [datos, setDatos] = useState(VACIO);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
+  // Si el admin eligió el operador a mano, cambiar la ruta ya no lo pisa.
+  const [operadorElegido, setOperadorElegido] = useState(false);
 
   useEffect(() => {
     setError(null);
+    setOperadorElegido(false);
     if (cuenta && cuenta !== 'nueva') {
       setDatos({
         numero_cuenta: cuenta.numero_cuenta,
@@ -44,6 +48,17 @@ export function FormularioCuenta({ cuenta, periodoAbierto, operadores, rutas, al
   const set = (campo: keyof typeof VACIO) => (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setDatos((d) => ({ ...d, [campo]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }));
 
+  function cambiarRuta(e: ChangeEvent<HTMLInputElement>) {
+    const ruta = e.target.value;
+    const operador = rutas.find((r) => r.ruta === ruta.trim().replace(/\s+/g, ' '))?.operador_id;
+    setDatos((d) => ({ ...d, ruta, ...(operador && !operadorElegido ? { operador_id: operador } : {}) }));
+  }
+
+  function cambiarOperador(e: ChangeEvent<HTMLSelectElement>) {
+    setOperadorElegido(true);
+    setDatos((d) => ({ ...d, operador_id: e.target.value }));
+  }
+
   async function guardar(e: FormEvent) {
     e.preventDefault();
     const numero = datos.numero_cuenta.trim();
@@ -54,6 +69,10 @@ export function FormularioCuenta({ cuenta, periodoAbierto, operadores, rutas, al
     const lectura = datos.ultima_lectura.trim() === '' ? null : parsearNumero(datos.ultima_lectura);
     if (datos.ultima_lectura.trim() !== '' && (lectura === null || lectura < 0)) {
       setError('La última lectura debe ser un número mayor o igual a 0.');
+      return;
+    }
+    if (esNueva && operadores.length > 0 && !datos.operador_id) {
+      setError('Elegí el operador que va a leer esta cuenta.');
       return;
     }
 
@@ -79,8 +98,13 @@ export function FormularioCuenta({ cuenta, periodoAbierto, operadores, rutas, al
     }
 
     // El operador se asigna aparte: si cambió, se le avisa al celular.
+    // Si no cambió pero se modificaron los datos, también se le avisa.
     let extra = '';
-    const antes = esNueva ? '' : ((cuenta as Cuenta).operador_id ?? '');
+    const original = esNueva ? null : (cuenta as Cuenta);
+    const antes = original?.operador_id ?? '';
+    const cambiaronDatos =
+      original !== null &&
+      (Object.keys(fila) as (keyof typeof fila)[]).some((k) => fila[k] !== original[k as keyof Cuenta]);
     if (datos.operador_id !== antes) {
       try {
         const r = await llamarFuncion<{ mensaje: string }>('asignar-cuentas', {
@@ -90,6 +114,13 @@ export function FormularioCuenta({ cuenta, periodoAbierto, operadores, rutas, al
         extra = ' ' + r.mensaje;
       } catch (e2) {
         extra = ` No se pudo asignar el operador: ${(e2 as Error).message}`;
+      }
+    } else if (datos.operador_id && cambiaronDatos) {
+      try {
+        const r = await llamarFuncion<{ mensaje: string }>('asignar-cuentas', { avisar: 'actualizadas', cuenta_ids: [guardada.id] });
+        if (r.mensaje) extra = ' ' + r.mensaje;
+      } catch (e2) {
+        extra = ` No se pudo avisar al operador: ${(e2 as Error).message}`;
       }
     }
     setGuardando(false);
@@ -133,17 +164,17 @@ export function FormularioCuenta({ cuenta, periodoAbierto, operadores, rutas, al
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="etiqueta">Ruta</span>
-            <input className="campo" list="rutas-existentes" value={datos.ruta} onChange={set('ruta')} placeholder="ej. Ruta 1" />
+            <input className="campo" list="rutas-existentes" value={datos.ruta} onChange={cambiarRuta} placeholder="ej. Ruta 1" />
             <datalist id="rutas-existentes">
-              {rutas.filter(Boolean).map((r) => (
-                <option key={r} value={r} />
+              {rutas.filter((r) => r.ruta).map((r) => (
+                <option key={r.ruta} value={r.ruta} />
               ))}
             </datalist>
           </label>
           <label className="block">
             <span className="etiqueta">Operador</span>
-            <select className="campo" value={datos.operador_id} onChange={set('operador_id')}>
-              <option value="">Sin asignar (la ven todos)</option>
+            <select className="campo" value={datos.operador_id} onChange={cambiarOperador}>
+              <option value="">{esNueva ? 'Elegí un operador' : 'Sin asignar (la ven todos)'}</option>
               {datos.operador_id && !operadores.some((o) => o.id === datos.operador_id) && (
                 <option value={datos.operador_id}>Operador desactivado</option>
               )}
@@ -155,6 +186,9 @@ export function FormularioCuenta({ cuenta, periodoAbierto, operadores, rutas, al
             </select>
           </label>
         </div>
+        {datos.operador_id && (
+          <p className="-mt-2 text-xs text-slate-500">Al guardar, al operador le llega un aviso al celular para descargar la cuenta.</p>
+        )}
         <label className="flex items-center gap-2">
           <input type="checkbox" className="size-5" checked={datos.activa} onChange={set('activa')} />
           <span>Cuenta activa (aparece en los celulares)</span>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { mensajeError } from '@/lib/consultas';
 import { fmtFechaHora, fmtNumero } from '@/lib/formato';
+import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Insignia, Tarjeta } from '@/components/ui';
 import type { VConflicto } from '@/types/database';
@@ -26,6 +27,7 @@ export function TablaConflictos({ periodoId, periodoActivo }: { periodoId: strin
     if (error) throw error;
     return data;
   }, [periodoId, verResueltos]);
+  useAlCambiarLecturas(() => void lista.recargar());
 
   async function resolver(c: VConflicto, accion: 'descartar' | 'reemplazar') {
     const texto =

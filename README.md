@@ -86,6 +86,7 @@ funciones. Están en la carpeta `supabase/migrations` y **hay que ejecutarlas en
    | 6 | `20260930000006_registro_seguro.sql` |
    | 7 | `20260930000007_ajustes_seguridad.sql` |
    | 8 | `20260930000008_rutas_y_avisos.sql` |
+   | 9 | `20260930000009_lecturas_en_vivo.sql` |
 
 6. **Datos de ejemplo (opcional):** si querés probar la app con 10 cuentas de prueba y un
    período "Octubre 2026", ejecutá también `supabase/seed.sql`. Para uso real no hace falta:
@@ -287,6 +288,21 @@ de nuevo para ver los cambios.
    de la ruta y le llega un aviso al celular: "Tenés cuentas nuevas para leer". Al tocarlo, la
    app se abre y descarga las cuentas sola.
 4. Para una sola cuenta: **Cuentas → Editar → Operador**.
+5. Un operador puede tener **varias rutas**: en **Operadores → Asignar rutas** marcá todas las
+   que lee. Le llega un solo aviso con las rutas nuevas.
+6. Al crear una cuenta nueva hay que elegir el operador. Si la ruta ya tiene operador, se elige
+   solo. Las cuentas nuevas del Excel también quedan del operador de su ruta.
+
+**Siempre que el admin le manda datos a un operador le llega un aviso:** al asignarle una ruta
+o una cuenta, al crear una cuenta en su ruta (a mano o por Excel) y al modificar una de sus
+cuentas.
+
+### Lecturas en vivo
+
+El panel del admin recibe cada lectura apenas el operador sincroniza, sin recargar: aparece un
+cartel, la campana de arriba suma el aviso (con fecha, hora, operador y alertas) y el Panel y
+Lecturas se actualizan solos. Con **Avisarme aunque no esté mirando** (dentro de la campana)
+también llega una notificación del navegador cuando la pestaña está en segundo plano.
 
 Cada operador descarga **sus cuentas y las que no tienen operador**. Una ruta en
 "Sin asignar" la ven todos.

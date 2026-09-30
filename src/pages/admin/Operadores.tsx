@@ -6,7 +6,7 @@ import { fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { useAuth } from '@/auth/contexto';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Encabezado, Insignia, Modal, Tarjeta } from '@/components/ui';
-import type { VOperador } from '@/types/database';
+import type { VOperador, VRuta } from '@/types/database';
 
 type Mensaje = { tono: 'exito' | 'error'; texto: string };
 
@@ -15,6 +15,7 @@ export default function Operadores() {
   const miId = auth.estado === 'con_sesion' ? auth.perfil.id : '';
   const [creando, setCreando] = useState(false);
   const [reseteando, setReseteando] = useState<VOperador | null>(null);
+  const [asignandoRutas, setAsignandoRutas] = useState<VOperador | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
   const [trabajando, setTrabajando] = useState<string | null>(null);
 
@@ -23,6 +24,14 @@ export default function Operadores() {
     if (error) throw error;
     return data;
   }, []);
+
+  const rutas = useConsulta(async () => {
+    const { data, error } = await supabase.from('v_rutas').select('*').neq('ruta', '').order('ruta');
+    if (error) throw error;
+    return data;
+  }, []);
+
+  const rutasDe = (id: string) => rutas.datos?.filter((r) => r.operador_id === id).map((r) => r.ruta) ?? [];
 
   async function cambiarActivo(o: VOperador) {
     const accion = o.activo ? 'desactivar' : 'activar';
@@ -62,6 +71,7 @@ export default function Operadores() {
                   <th>Nombre</th>
                   <th>Ingresa con</th>
                   <th>Rol</th>
+                  <th>Rutas</th>
                   <th className="text-right">Lecturas (período activo)</th>
                   <th className="text-right">Lecturas (total)</th>
                   <th>Última lectura</th>
@@ -77,6 +87,20 @@ export default function Operadores() {
                     </td>
                     <td>{o.usuario ?? o.email}</td>
                     <td>{o.rol === 'admin' ? <Insignia color="violeta">Admin</Insignia> : 'Operador'}</td>
+                    <td>
+                      {o.rol === 'operador' && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          {rutasDe(o.id).map((r) => (
+                            <Insignia key={r}>{r}</Insignia>
+                          ))}
+                          {o.activo && (
+                            <button className="text-sm text-marca-700 hover:underline" onClick={() => setAsignandoRutas(o)}>
+                              {rutasDe(o.id).length ? 'Cambiar' : 'Asignar rutas'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="text-right tabular-nums">{fmtNumero(o.lecturas_periodo_activo)}</td>
                     <td className="text-right tabular-nums">{fmtNumero(o.lecturas_total)}</td>
                     <td className="whitespace-nowrap">{fmtFechaHora(o.ultima_lectura_at)}</td>
@@ -105,6 +129,16 @@ export default function Operadores() {
           setCreando(false);
           setMensaje({ tono: 'exito', texto });
           void lista.recargar();
+        }}
+      />
+      <AsignarRutas
+        operador={asignandoRutas}
+        rutas={rutas.datos ?? []}
+        alCerrar={() => setAsignandoRutas(null)}
+        alGuardar={(texto) => {
+          setAsignandoRutas(null);
+          setMensaje({ tono: 'exito', texto });
+          void rutas.recargar();
         }}
       />
       <ResetearPassword
@@ -251,6 +285,108 @@ function ResetearPassword({ operador, alCerrar, alGuardar }: { operador: VOperad
           </button>
           <button type="submit" className="boton-primario" disabled={guardando}>
             {guardando ? 'Guardando…' : 'Cambiar contraseña'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function AsignarRutas({
+  operador,
+  rutas,
+  alCerrar,
+  alGuardar,
+}: {
+  operador: VOperador | null;
+  rutas: VRuta[];
+  alCerrar: () => void;
+  alGuardar: (m: string) => void;
+}) {
+  const [elegidas, setElegidas] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [abiertoPara, setAbiertoPara] = useState<string | null>(null);
+
+  // Al abrir, marcar las rutas que ya tiene
+  if (operador && abiertoPara !== operador.id) {
+    setAbiertoPara(operador.id);
+    setElegidas(new Set(rutas.filter((r) => r.operador_id === operador.id).map((r) => r.ruta)));
+    setError(null);
+  }
+  if (!operador && abiertoPara !== null) setAbiertoPara(null);
+
+  function alternar(ruta: string) {
+    setElegidas((antes) => {
+      const nuevas = new Set(antes);
+      if (nuevas.has(ruta)) nuevas.delete(ruta);
+      else nuevas.add(ruta);
+      return nuevas;
+    });
+  }
+
+  async function guardar(e: FormEvent) {
+    e.preventDefault();
+    if (!operador) return;
+    const tenia = rutas.filter((r) => r.operador_id === operador.id).map((r) => r.ruta);
+    const agregar = [...elegidas].filter((r) => !tenia.includes(r));
+    const quitar = tenia.filter((r) => !elegidas.has(r));
+    if (!agregar.length && !quitar.length) return alCerrar();
+    setGuardando(true);
+    setError(null);
+    try {
+      const mensajes: string[] = [];
+      if (agregar.length) {
+        const r = await llamarFuncion<{ mensaje: string }>('asignar-cuentas', { rutas: agregar, operador_id: operador.id });
+        mensajes.push(r.mensaje);
+      }
+      if (quitar.length) {
+        await llamarFuncion('asignar-cuentas', { rutas: quitar, operador_id: null });
+        mensajes.push(`${quitar.join(', ')} ${quitar.length === 1 ? 'quedó' : 'quedaron'} sin asignar.`);
+      }
+      alGuardar(mensajes.join(' '));
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Modal titulo={`Rutas de ${operador?.nombre ?? ''}`} abierto={operador !== null} alCerrar={alCerrar}>
+      <form onSubmit={guardar} className="space-y-4">
+        {rutas.length === 0 ? (
+          <p className="text-sm text-slate-600">Todavía no hay rutas. Cargá la ruta de cada cuenta en Cuentas o desde el Excel.</p>
+        ) : (
+          <>
+            <p className="text-sm text-slate-600">Marcá las rutas que lee. Al guardar le llega un aviso al celular con las rutas nuevas.</p>
+            <ul className="max-h-80 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200">
+              {rutas.map((r) => {
+                const deOtro = r.operador_id && r.operador_id !== operador?.id ? r.operador_nombre : null;
+                return (
+                  <li key={r.ruta}>
+                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2">
+                      <input type="checkbox" className="size-5" checked={elegidas.has(r.ruta)} onChange={() => alternar(r.ruta)} />
+                      <span className="flex-1">
+                        <span className="font-medium">{r.ruta}</span>{' '}
+                        <span className="text-sm text-slate-500">({fmtNumero(r.cuentas)} cuentas)</span>
+                      </span>
+                      {deOtro && <span className="text-xs text-slate-500">Hoy: {deOtro}</span>}
+                      {r.repartida && <Insignia color="amarillo">Repartida</Insignia>}
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+        {error && <Aviso tono="error">{error}</Aviso>}
+        <div className="flex justify-end gap-2">
+          <button type="button" className="boton-secundario" onClick={alCerrar}>
+            Cancelar
+          </button>
+          <button type="submit" className="boton-primario" disabled={guardando || rutas.length === 0}>
+            {guardando ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
       </form>

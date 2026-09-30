@@ -39,9 +39,9 @@ export default function Cuentas() {
   }, []);
 
   const rutas = useConsulta(async () => {
-    const { data, error } = await supabase.from('v_rutas').select('ruta').order('ruta');
+    const { data, error } = await supabase.from('v_rutas').select('ruta, operador_id').order('ruta');
     if (error) throw error;
-    return data.map((r) => r.ruta);
+    return data;
   }, []);
 
   const nombreOperador = (id: string | null) =>
@@ -137,7 +137,7 @@ export default function Cuentas() {
             aria-label="Filtrar por ruta"
           >
             <option value={TODAS_LAS_RUTAS}>Todas las rutas</option>
-            {rutas.datos?.map((r) => (
+            {rutas.datos?.map(({ ruta: r }) => (
               <option key={r} value={r}>
                 {r || 'Sin ruta'}
               </option>

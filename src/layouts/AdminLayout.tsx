@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router';
 import { useAuth } from '@/auth/contexto';
 import { IndicadorConexion } from '@/components/IndicadorConexion';
+import { CampanaAvisos, ProveedorAvisosLecturas } from '@/components/AvisosLecturas';
 
 const SECCIONES = [
   { a: '/admin', texto: 'Panel', fin: true },
@@ -16,6 +17,7 @@ export default function AdminLayout() {
   const nombre = auth.estado === 'con_sesion' ? auth.perfil.nombre : '';
 
   return (
+    <ProveedorAvisosLecturas>
     <div className="min-h-screen md:flex">
       <aside className="border-b border-slate-200 bg-white md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-r md:border-b-0">
         <div className="flex items-center justify-between gap-2 p-4">
@@ -23,7 +25,8 @@ export default function AdminLayout() {
             <img src="/logo/coopsar.svg" alt="COOPSAR" className="h-8 w-auto" />
             <p className="mt-1 text-xs text-slate-500">Lecturas · Administración</p>
           </div>
-          <div className="shrink-0">
+          <div className="flex shrink-0 items-center gap-1">
+            <CampanaAvisos />
             <IndicadorConexion />
           </div>
         </div>
@@ -63,5 +66,6 @@ export default function AdminLayout() {
         </main>
       </div>
     </div>
+    </ProveedorAvisosLecturas>
   );
 }

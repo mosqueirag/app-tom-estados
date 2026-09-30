@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
-import { mensajeError, traerTodo } from '@/lib/consultas';
+import { llamarFuncion, mensajeError, traerTodo } from '@/lib/consultas';
 import { fmtNumero } from '@/lib/formato';
 import { descargarPlantillaCuentas, leerMatrizExcel } from '@/lib/excel';
 import { validarCuentas, type CuentaExistente, type EstadoFila, type ResultadoValidacion } from '@/lib/importarCuentas';
@@ -75,6 +75,8 @@ export function ImportarCuentas({ abierto, periodoAbierto, alCerrar }: Props) {
     setError(null);
     let creadas = 0;
     let actualizadas = 0;
+    const idsNuevas: string[] = [];
+    const idsActualizadas: string[] = [];
     try {
       for (let i = 0; i < nuevas.length; i += LOTE) {
         const lote = nuevas.slice(i, i + LOTE).map((f) => ({
@@ -85,8 +87,9 @@ export function ImportarCuentas({ abierto, periodoAbierto, alCerrar }: Props) {
           ultima_lectura: f.ultima_lectura,
           ...(f.ruta !== null ? { ruta: f.ruta } : {}),
         }));
-        const { error: err } = await supabase.from('cuentas').insert(lote);
+        const { data: filas, error: err } = await supabase.from('cuentas').insert(lote).select('id');
         if (err) throw err;
+        idsNuevas.push(...(filas ?? []).map((f) => f.id));
         creadas += lote.length;
       }
       for (let i = 0; i < aActualizar.length; i += LOTE) {
@@ -99,11 +102,25 @@ export function ImportarCuentas({ abierto, periodoAbierto, alCerrar }: Props) {
           activa: true,
           ...(periodoAbierto ? {} : { ultima_lectura: f.ultima_lectura }),
         }));
-        const { error: err } = await supabase.from('cuentas').upsert(lote, { onConflict: 'numero_cuenta' });
+        const { data: filas, error: err } = await supabase.from('cuentas').upsert(lote, { onConflict: 'numero_cuenta' }).select('id');
         if (err) throw err;
+        idsActualizadas.push(...(filas ?? []).map((f) => f.id));
         actualizadas += lote.length;
       }
-      setResultado(`Listo: ${fmtNumero(creadas)} cuentas nuevas y ${fmtNumero(actualizadas)} actualizadas.`);
+      // Avisar a los operadores de las rutas que recibieron cuentas nuevas o cambios.
+      const avisos: string[] = [];
+      for (const [avisar, ids] of [['nuevas', idsNuevas], ['actualizadas', idsActualizadas]] as const) {
+        if (!ids.length) continue;
+        try {
+          const r = await llamarFuncion<{ mensaje: string }>('asignar-cuentas', { avisar, cuenta_ids: ids });
+          if (r.mensaje) avisos.push(r.mensaje);
+        } catch (e) {
+          avisos.push(`No se pudo avisar a los operadores: ${(e as Error).message}`);
+        }
+      }
+      setResultado(
+        [`Listo: ${fmtNumero(creadas)} cuentas nuevas y ${fmtNumero(actualizadas)} actualizadas.`, ...new Set(avisos)].join(' '),
+      );
       setMatriz(null);
       setArchivo(null);
     } catch (e) {

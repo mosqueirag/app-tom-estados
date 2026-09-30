@@ -6,6 +6,7 @@ const fechaHora = new Intl.DateTimeFormat('es-AR', {
   year: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
+  hourCycle: 'h23', // 14:35 y no 02:35 p. m.
 });
 
 export function fmtNumero(valor: number | null | undefined): string {

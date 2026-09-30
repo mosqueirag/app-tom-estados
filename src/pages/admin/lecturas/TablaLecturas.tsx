@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fmtFechaHora, fmtNumero } from '@/lib/formato';
+import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Insignia, Paginador, Tarjeta } from '@/components/ui';
 import type { VLectura } from '@/types/database';
@@ -50,6 +51,7 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
     if (error) throw error;
     return { filas: data, total: count ?? 0 };
   }, [clave, pagina]);
+  useAlCambiarLecturas(() => void lista.recargar());
 
   return (
     <Tarjeta className="p-0">

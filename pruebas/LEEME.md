@@ -12,6 +12,7 @@ Son para quien mantenga el código (no hace falta correrlas para usar la app).
 | `fase4.mjs` | Módulo operador: descarga, búsqueda, validaciones, offline, sincronización, conflictos | 20 |
 | `fase5.mjs` | PWA: manifest, íconos, service worker, abrir y cargar en modo avión | 11 |
 | `fase6.mjs` | Rutas: asignar a operadores, filtro, Excel con ruta, descarga por operador, abrir desde el aviso | 15 |
+| `fase7.mjs` | Lecturas en vivo (Realtime simulado), campana con fecha y hora, cuenta nueva con operador de la ruta, varias rutas por operador | 20 |
 
 ## Cómo se corren
 

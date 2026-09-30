@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { supabase } from '@/lib/supabase';
 import { mensajeError } from '@/lib/consultas';
-import { fmtFecha, fmtNumero } from '@/lib/formato';
+import { fmtFecha, fmtFechaHora, fmtNumero } from '@/lib/formato';
+import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, BarraProgreso, Cargando, Encabezado, Insignia, Tarjeta } from '@/components/ui';
 import type { Configuracion, Periodo, ResumenPeriodo, VLectura } from '@/types/database';
@@ -38,6 +39,7 @@ export default function PanelAdmin() {
     if (e4) throw e4;
     return { periodo, resumen: resumen as unknown as ResumenPeriodo, alertas: alertas ?? [], config };
   }, []);
+  useAlCambiarLecturas(() => void panel.recargar());
 
   if (panel.cargando && !panel.datos) return <Cargando />;
   if (panel.error) return <Aviso tono="error">{panel.error}</Aviso>;
@@ -100,6 +102,10 @@ export default function PanelAdmin() {
                   <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
                     <span>
                       <strong>{a.numero_cuenta}</strong> · {a.titular}
+                      <span className="block text-xs text-slate-500">
+                        <time dateTime={a.fecha_lectura}>{fmtFechaHora(a.fecha_lectura)}</time>
+                        {a.operador_nombre ? ` · ${a.operador_nombre}` : ''}
+                      </span>
                     </span>
                     <span className="flex flex-wrap items-center gap-2">
                       {a.alerta_menor_anterior && <Insignia color="rojo">Menor a la anterior</Insignia>}

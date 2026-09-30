@@ -106,7 +106,7 @@ await intentar('Cuentas', async () => {
   await page.getByRole('button', { name: 'Nueva cuenta' }).click();
   const d = page.locator('dialog[open]');
   await d.getByLabel('Número de cuenta').fill('10011'); await d.getByLabel('Titular').fill('Acosta, Pedro');
-  await d.getByLabel('Dirección').fill('Italia 55'); await d.getByLabel('Medidor').fill('MED-1'); await d.getByLabel('Última lectura').fill('1.500,5');
+  await d.getByLabel('Dirección').fill('Italia 55'); await d.getByLabel('Medidor').fill('MED-1'); await d.getByLabel('Última lectura').fill('1.500,5'); await d.getByLabel('Operador').selectOption({ label: 'Juan Pérez' });
   await d.getByRole('button', { name: 'Guardar' }).click();
   await main.getByText('Cuenta 10011 creada.').waitFor();
   ok('Cuentas: alta manual (lectura con formato 1.500,5)', psql("select ultima_lectura from cuentas where numero_cuenta='10011'") === '1500.500');
@@ -227,7 +227,7 @@ await intentar('Operadores', async () => {
   await page.getByRole('link', { name: 'Operadores' }).click();
   await main.getByText('Juan Pérez').waitFor();
   const filaJuan = main.locator('tr', { hasText: 'Juan Pérez' });
-  ok('Operadores: cantidad de lecturas por operador', (await filaJuan.locator('td').nth(3).textContent()).trim() === '3', await filaJuan.locator('td').nth(3).textContent());
+  ok('Operadores: cantidad de lecturas por operador', (await filaJuan.locator('td').nth(4).textContent()).trim() === '3', await filaJuan.locator('td').nth(4).textContent());
   await page.getByRole('button', { name: 'Nuevo operador' }).click();
   const d = page.locator('dialog[open]');
   await d.getByLabel('Nombre y apellido').fill('Carla Ruiz'); await d.getByRole('textbox', { name: 'Nombre de usuario' }).fill('cruiz');

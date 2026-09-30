@@ -1,9 +1,14 @@
 // POST /functions/v1/asignar-cuentas
-// Body: { operador_id: uuid | null, ruta?: string, cuenta_ids?: uuid[] }
+// Body: { operador_id: uuid | null, ruta?: string, rutas?: string[], cuenta_ids?: uuid[] }
 //   ruta       → asigna todas las cuentas activas de esa ruta
+//   rutas      → lo mismo con varias rutas a la vez (un solo aviso)
 //   cuenta_ids → asigna esas cuentas
 //   operador_id null → las deja sin asignar
 // Después avisa al operador con una notificación push en su celular.
+//
+// Body: { avisar: 'nuevas' | 'actualizadas', cuenta_ids: uuid[] }
+//   No cambia nada: avisa a cada operador de esas cuentas que tiene datos
+//   nuevos para descargar (cuentas creadas o modificadas por el admin).
 //
 // Archivo autocontenido: se puede pegar tal cual en el editor de Edge Functions
 // del panel de Supabase, o publicar con `npx supabase functions deploy`.
@@ -100,6 +105,55 @@ async function enviarAvisos(servicio: SupabaseClient, perfilId: string, aviso: R
 
 // --------------------------------------------------------------- Función
 const UUID = /^[0-9a-f-]{36}$/i;
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+
+// Avisa a los operadores de estas cuentas que tienen datos nuevos.
+async function avisarCambios(servicio: SupabaseClient, body: Record<string, unknown>): Promise<Response> {
+  const tipo = body.avisar === 'nuevas' ? 'nuevas' : 'actualizadas';
+  const ids: string[] = Array.isArray(body.cuenta_ids) ? body.cuenta_ids.map(String) : [];
+  if (!ids.length) return json({ avisos_enviados: 0, mensaje: '' });
+  if (ids.some((id) => !UUID.test(id))) return error('Cuenta inválida.');
+
+  const porOperador = new Map<string, { numeros: string[] }>();
+  for (let i = 0; i < ids.length; i += 500) {
+    const { data, error: e } = await servicio
+      .from('cuentas')
+      .select('numero_cuenta, operador_id')
+      .in('id', ids.slice(i, i + 500))
+      .eq('activa', true)
+      .not('operador_id', 'is', null);
+    if (e) return error(`No se pudo avisar: ${e.message}`, 500);
+    for (const c of data ?? []) {
+      const g = porOperador.get(c.operador_id) ?? { numeros: [] };
+      g.numeros.push(c.numero_cuenta);
+      porOperador.set(c.operador_id, g);
+    }
+  }
+  if (!porOperador.size) return json({ avisos_enviados: 0, mensaje: '' });
+
+  const { data: perfiles } = await servicio.from('perfiles').select('id, nombre').in('id', [...porOperador.keys()]);
+  const nombres = new Map((perfiles ?? []).map((p) => [p.id as string, p.nombre as string]));
+
+  const avisados: string[] = [];
+  const sinAvisos: string[] = [];
+  let enviados = 0;
+  for (const [operadorId, { numeros }] of porOperador) {
+    const n = numeros.length;
+    const cuales = n === 1 ? `la cuenta ${numeros[0]}` : plural(n, 'cuenta', 'cuentas');
+    const aviso =
+      tipo === 'nuevas'
+        ? { titulo: 'Tenés cuentas nuevas para leer', cuerpo: `Te asignaron ${cuales}. Tocá para descargar${n === 1 ? 'la' : 'las'}.` }
+        : { titulo: 'Se actualizaron tus cuentas', cuerpo: `El administrador modificó ${cuales}. Tocá para descargar los datos nuevos.` };
+    const r = await enviarAvisos(servicio, operadorId, { ...aviso, url: '/operador?descargar=1', tag: 'asignacion' });
+    enviados += r.enviados;
+    (r.enviados ? avisados : sinAvisos).push(nombres.get(operadorId) ?? 'un operador');
+  }
+
+  const partes: string[] = [];
+  if (avisados.length) partes.push(`Se avisó en el celular a ${avisados.join(', ')}.`);
+  if (sinAvisos.length) partes.push(`${sinAvisos.join(', ')} no tiene${sinAvisos.length === 1 ? '' : 'n'} los avisos activados: avisale vos.`);
+  return json({ avisos_enviados: enviados, mensaje: partes.join(' ') });
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -109,12 +163,18 @@ Deno.serve(async (req) => {
     const { servicio } = await exigirAdmin(req);
     const body = await req.json().catch(() => null);
 
+    if (body?.avisar) return await avisarCambios(servicio, body);
+
     const operadorId = body?.operador_id ? String(body.operador_id) : null;
-    const ruta = typeof body?.ruta === 'string' ? body.ruta.trim() : null;
+    const rutas: string[] | null = Array.isArray(body?.rutas)
+      ? [...new Set<string>(body.rutas.map((r: unknown) => String(r).trim()))]
+      : typeof body?.ruta === 'string'
+        ? [body.ruta.trim()]
+        : null;
     const cuentaIds: string[] = Array.isArray(body?.cuenta_ids) ? body.cuenta_ids.map(String) : [];
 
     if (operadorId && !UUID.test(operadorId)) return error('Operador inválido.');
-    if (ruta === null && !cuentaIds.length) return error('Indicá la ruta o las cuentas a asignar.');
+    if ((rutas === null || !rutas.length) && !cuentaIds.length) return error('Indicá la ruta o las cuentas a asignar.');
     if (cuentaIds.some((id) => !UUID.test(id))) return error('Cuenta inválida.');
 
     let operadorNombre = '';
@@ -126,12 +186,20 @@ Deno.serve(async (req) => {
     }
 
     let consulta = servicio.from('cuentas').update({ operador_id: operadorId });
-    consulta = ruta !== null ? consulta.eq('ruta', ruta).eq('activa', true) : consulta.in('id', cuentaIds);
+    if (rutas !== null && rutas.length > 1 && rutas.includes('')) return error('Asigná las cuentas sin ruta por separado.');
+    if (rutas === null) consulta = consulta.in('id', cuentaIds);
+    else consulta = (rutas.length === 1 ? consulta.eq('ruta', rutas[0]) : consulta.in('ruta', rutas)).eq('activa', true);
     const { data: cambiadas, error: e1 } = await consulta.select('id');
     if (e1) return error(`No se pudo asignar: ${e1.message}`, 500);
     const cantidad = cambiadas?.length ?? 0;
 
-    const que = ruta !== null ? (ruta ? `la ${ruta}` : 'las cuentas sin ruta') : `${cantidad} cuenta${cantidad === 1 ? '' : 's'}`;
+    const nombres = (rutas ?? []).map((r) => (r ? r : 'las cuentas sin ruta'));
+    const que =
+      rutas !== null
+        ? nombres.length === 1
+          ? rutas[0] ? `la ${rutas[0]}` : nombres[0]
+          : `${nombres.slice(0, -1).join(', ')} y ${nombres.at(-1)}`
+        : `${cantidad} cuenta${cantidad === 1 ? '' : 's'}`;
     if (!operadorId) {
       return json({ actualizadas: cantidad, mensaje: `Quedaron sin asignar ${cantidad} cuenta${cantidad === 1 ? '' : 's'}.` });
     }
@@ -140,7 +208,7 @@ Deno.serve(async (req) => {
     const aviso = {
       titulo: 'Tenés cuentas nuevas para leer',
       cuerpo:
-        ruta !== null
+        rutas !== null
           ? `Te asignaron ${que} (${cantidad} cuenta${cantidad === 1 ? '' : 's'}). Tocá para descargarlas.`
           : `Te asignaron ${que}. Tocá para descargarlas.`,
       url: '/operador?descargar=1',
