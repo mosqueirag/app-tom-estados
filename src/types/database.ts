@@ -39,6 +39,7 @@ export type Cuenta = {
   operador_id: string | null;
   latitud: number | null;
   longitud: number | null;
+  orden: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -57,6 +58,7 @@ export type Configuracion = {
   id: number;
   umbral_consumo_anomalo: number;
   foto_obligatoria: boolean;
+  localidad: string;
   updated_at: string;
 };
 
@@ -274,6 +276,7 @@ export type Database = {
         Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string };
         Returns: undefined;
       };
+      ordenar_ruta: { Args: { p_ruta: string; p_cuenta_ids: string[] }; Returns: number };
       registrar_extras_lecturas: { Args: { p_extras: Json }; Returns: number };
       resolver_conflicto: {
         Args: { p_conflicto_id: string; p_accion: 'descartar' | 'reemplazar' };

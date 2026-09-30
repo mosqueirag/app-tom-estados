@@ -88,6 +88,7 @@ funciones. Están en la carpeta `supabase/migrations` y **hay que ejecutarlas en
    | 8 | `20260930000008_rutas_y_avisos.sql` |
    | 9 | `20260930000009_lecturas_en_vivo.sql` |
    | 10 | `20260930000010_fotos_y_ubicacion.sql` |
+   | 11 | `20260930000011_orden_de_recorrido.sql` |
 
 6. **Datos de ejemplo (opcional):** si querés probar la app con 10 cuentas de prueba y un
    período "Octubre 2026", ejecutá también `supabase/seed.sql`. Para uso real no hace falta:
@@ -297,6 +298,14 @@ de nuevo para ver los cambios.
 **Siempre que el admin le manda datos a un operador le llega un aviso:** al asignarle una ruta
 o una cuenta, al crear una cuenta en su ruta (a mano o por Excel) y al modificar una de sus
 cuentas.
+
+### Orden de recorrido
+
+En **Rutas → Ordenar recorrido** el admin pone las cuentas de cada ruta en el orden en que se
+caminan (con flechas, o **Ordenar por dirección** para empezar). En el celular, la pestaña
+**Recorrido** muestra la ruta en ese orden, cuál sigue y un botón **Cómo llegar** que abre Google
+Maps: usa la ubicación GPS de la última lectura, o la dirección más la **Localidad** que se
+carga en el Panel.
 
 ### Foto del medidor y ubicación
 

@@ -5,6 +5,7 @@ import { fmtNumero } from '@/lib/formato';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Encabezado, Insignia, Tarjeta } from '@/components/ui';
 import type { VRuta } from '@/types/database';
+import { OrdenarRuta } from './rutas/OrdenarRuta';
 
 type Mensaje = { tono: 'exito' | 'error'; texto: string };
 
@@ -14,6 +15,7 @@ const nombreRuta = (r: string) => r || 'Sin ruta';
 export default function Rutas() {
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
   const [guardando, setGuardando] = useState<string | null>(null);
+  const [ordenando, setOrdenando] = useState<string | null>(null);
 
   const rutas = useConsulta(async () => {
     const { data, error } = await supabase.from('v_rutas').select('*').order('ruta');
@@ -81,6 +83,7 @@ export default function Rutas() {
                   <th className="text-right">Cuentas</th>
                   <th className="text-right">Pendientes del período</th>
                   <th>Operador</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -113,11 +116,16 @@ export default function Rutas() {
                       </select>
                       {guardando === r.ruta && <span className="ml-2 text-sm text-slate-500">Asignando…</span>}
                     </td>
+                    <td className="text-right">
+                      <button className="boton-chico whitespace-nowrap" onClick={() => setOrdenando(r.ruta)} aria-label={`Ordenar recorrido de ${nombreRuta(r.ruta)}`}>
+                        Ordenar recorrido
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {rutas.datos?.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="py-8 text-center text-slate-500">
+                    <td colSpan={5} className="py-8 text-center text-slate-500">
                       Todavía no hay cuentas activas.
                     </td>
                   </tr>
@@ -127,6 +135,14 @@ export default function Rutas() {
           </div>
         )}
       </Tarjeta>
+      <OrdenarRuta
+        ruta={ordenando}
+        alCerrar={() => setOrdenando(null)}
+        alGuardar={(texto) => {
+          setOrdenando(null);
+          setMensaje({ tono: 'exito', texto });
+        }}
+      />
     </div>
   );
 }

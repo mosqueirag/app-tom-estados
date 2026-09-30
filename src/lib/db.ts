@@ -7,7 +7,13 @@ import type { Cuenta, Periodo } from '@/types/database';
 export type CuentaLocal = Pick<
   Cuenta,
   'id' | 'numero_cuenta' | 'titular' | 'direccion' | 'medidor' | 'ultima_lectura' | 'fecha_ultima_lectura' | 'ultimo_consumo'
-> & { ruta?: string }; // ruta puede faltar en cuentas descargadas antes de que existiera
+> & {
+  // pueden faltar en cuentas descargadas con una versión anterior de la app
+  ruta?: string;
+  orden?: number | null;
+  latitud?: number | null;
+  longitud?: number | null;
+};
 
 /** pendiente → todavía no llegó al servidor; enviada → guardada; conflicto → otro la leyó / período cerrado; rechazada → dato inválido */
 export type EstadoLecturaLocal = 'pendiente' | 'enviada' | 'conflicto' | 'rechazada';

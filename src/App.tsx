@@ -10,6 +10,7 @@ import Instalar from '@/pages/Instalar';
 import { AvisoActualizacion } from '@/components/AvisoActualizacion';
 import InicioOperador from '@/pages/operador/Inicio';
 import Buscar from '@/pages/operador/Buscar';
+import Recorrido from '@/pages/operador/Recorrido';
 import CargarLectura from '@/pages/operador/CargarLectura';
 import MisLecturas from '@/pages/operador/MisLecturas';
 
@@ -51,6 +52,7 @@ export default function App() {
           <Route element={<RequiereRol rol="operador" />}>
             <Route path="/operador" element={<OperadorLayout />}>
               <Route index element={<InicioOperador />} />
+              <Route path="recorrido" element={<Recorrido />} />
               <Route path="buscar" element={<Buscar />} />
               <Route path="cuenta/:id" element={<CargarLectura />} />
               <Route path="mis-lecturas" element={<MisLecturas />} />

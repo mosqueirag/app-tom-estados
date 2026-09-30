@@ -7,6 +7,7 @@ import { renovarPush } from '@/lib/push';
 
 const PESTANIAS = [
   { a: '/operador', texto: 'Inicio', icono: '🏠', fin: true },
+  { a: '/operador/recorrido', texto: 'Recorrido', icono: '🧭' },
   { a: '/operador/buscar', texto: 'Buscar', icono: '🔎' },
   { a: '/operador/mis-lecturas', texto: 'Mis lecturas', icono: '📋' },
   { a: '/operador/ayuda', texto: 'Ayuda', icono: '❔' },

@@ -154,7 +154,7 @@ export async function descargarCuentas(operadorId: string): Promise<{ cantidad: 
 
   const [{ data: periodo, error: e1 }, { data: config, error: e2 }] = await Promise.all([
     supabase.from('periodos').select('*').eq('activo', true).maybeSingle(),
-    supabase.from('configuracion').select('umbral_consumo_anomalo, foto_obligatoria').eq('id', 1).maybeSingle(),
+    supabase.from('configuracion').select('umbral_consumo_anomalo, foto_obligatoria, localidad').eq('id', 1).maybeSingle(),
   ]);
   if (e1) throw e1;
   if (e2) throw e2;
@@ -162,7 +162,7 @@ export async function descargarCuentas(operadorId: string): Promise<{ cantidad: 
   const cuentas = await traerTodo<CuentaLocal>((d, h) =>
     supabase
       .from('cuentas')
-      .select('id, numero_cuenta, titular, direccion, medidor, ultima_lectura, fecha_ultima_lectura, ultimo_consumo, ruta')
+      .select('id, numero_cuenta, titular, direccion, medidor, ultima_lectura, fecha_ultima_lectura, ultimo_consumo, ruta, orden, latitud, longitud')
       .eq('activa', true)
       .order('numero_cuenta')
       .range(d, h),
@@ -217,6 +217,7 @@ export async function descargarCuentas(operadorId: string): Promise<{ cantidad: 
       periodo: periodo ?? null,
       umbral: Number(config?.umbral_consumo_anomalo ?? 3),
       foto_obligatoria: Boolean(config?.foto_obligatoria),
+      localidad: config?.localidad ?? '',
       fecha: new Date().toISOString(),
       cantidad: cuentas.length,
     });

@@ -122,6 +122,7 @@ export default function PanelAdmin() {
 
       {config && <Umbral config={config} alGuardar={() => void panel.recargar()} />}
       {config && <FotoObligatoria config={config} alGuardar={() => void panel.recargar()} />}
+      {config && <Localidad config={config} alGuardar={() => void panel.recargar()} />}
     </div>
   );
 }
@@ -205,6 +206,46 @@ function FotoObligatoria({ config, alGuardar }: { config: Configuracion; alGuard
         <input type="checkbox" className="size-5" checked={config.foto_obligatoria} disabled={guardando} onChange={(e) => void cambiar(e.target.checked)} />
         <span>Exigir foto en cada lectura</span>
       </label>
+      {estado && (
+        <Aviso tono={estado.tono} className="mt-3">
+          {estado.texto}
+        </Aviso>
+      )}
+    </Tarjeta>
+  );
+}
+
+function Localidad({ config, alGuardar }: { config: Configuracion; alGuardar: () => void }) {
+  const [valor, setValor] = useState(config.localidad);
+  const [estado, setEstado] = useState<{ tono: 'exito' | 'error'; texto: string } | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  async function guardar() {
+    setGuardando(true);
+    const { error } = await supabase.from('configuracion').update({ localidad: valor.trim() }).eq('id', 1);
+    setGuardando(false);
+    if (error) setEstado({ tono: 'error', texto: mensajeError(error) });
+    else {
+      setEstado({ tono: 'exito', texto: 'Localidad guardada. Los celulares la toman al descargar las cuentas.' });
+      alGuardar();
+    }
+  }
+
+  return (
+    <Tarjeta>
+      <h2 className="font-semibold">Localidad</h2>
+      <p className="mt-1 text-sm text-slate-600">
+        Se agrega a la dirección cuando el operador toca “Cómo llegar”, para que Google Maps encuentre la calle correcta.
+      </p>
+      <div className="mt-3 flex flex-wrap items-end gap-3">
+        <label>
+          <span className="etiqueta">Localidad y provincia</span>
+          <input className="campo w-72" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="ej. San Rafael, Mendoza" aria-label="Localidad" />
+        </label>
+        <button className="boton-primario" onClick={() => void guardar()} disabled={guardando}>
+          Guardar
+        </button>
+      </div>
       {estado && (
         <Aviso tono={estado.tono} className="mt-3">
           {estado.texto}
