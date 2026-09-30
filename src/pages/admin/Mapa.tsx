@@ -9,6 +9,7 @@ import { useConsulta } from '@/hooks/useConsulta';
 import { usePeriodos } from '@/hooks/usePeriodos';
 import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
 import { VerFoto } from '@/components/VerFoto';
+import { EscucharNota } from '@/components/EscucharNota';
 import { Aviso, Cargando, Encabezado, Insignia, Tarjeta } from '@/components/ui';
 import type { VLectura } from '@/types/database';
 
@@ -33,6 +34,7 @@ export default function Mapa() {
   const [ruta, setRuta] = useState('');
   const [seleccionada, setSeleccionada] = useState<VLectura | null>(null);
   const [foto, setFoto] = useState<VLectura | null>(null);
+  const [nota, setNota] = useState<VLectura | null>(null);
   const idPeriodo = periodoId || periodos.datos?.[0]?.id || '';
 
   const lecturas = useConsulta(async () => {
@@ -166,6 +168,11 @@ export default function Mapa() {
                   Ver foto
                 </button>
               )}
+              {seleccionada.audio_path && (
+                <button className="boton-chico" onClick={() => setNota(seleccionada)}>
+                  Escuchar nota
+                </button>
+              )}
               <a className="boton-chico" href={linkMapa(seleccionada)} target="_blank" rel="noreferrer">
                 Abrir en Google Maps
               </a>
@@ -174,6 +181,7 @@ export default function Mapa() {
         </Tarjeta>
       )}
 
+      <EscucharNota titulo={nota ? `Nota de voz · cuenta ${nota.numero_cuenta}` : ''} path={nota?.audio_path ?? null} alCerrar={() => setNota(null)} />
       <VerFoto titulo={foto ? `Cuenta ${foto.numero_cuenta}` : ''} path={foto?.foto_path ?? null} alCerrar={() => setFoto(null)} />
     </div>
   );

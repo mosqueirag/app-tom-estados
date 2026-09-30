@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/contexto';
 import { EstadoSync } from '@/components/EstadoSync';
 import { ProveedorSync } from '@/sync/ProveedorSync';
 import { renovarPush } from '@/lib/push';
+import { AvisoBateria } from '@/components/AvisoBateria';
 
 const PESTANIAS = [
   { a: '/operador', texto: 'Inicio', icono: '🏠', fin: true },
@@ -31,6 +32,8 @@ export default function OperadorLayout() {
         <img src="/logo/coopsar.svg" alt="COOPSAR" className="h-7 w-auto" />
         <EstadoSync />
       </header>
+
+      <AvisoBateria />
 
       {sinVerificar && (
         <p className="bg-amber-50 px-4 py-2 text-center text-xs text-amber-900">

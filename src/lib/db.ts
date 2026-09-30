@@ -40,12 +40,16 @@ export type LecturaLocal = {
   longitud?: number | null;
   precision_gps?: number | null;
   tiene_foto?: boolean;
-  /** true mientras falte subir la foto o mandar la ubicación */
+  tiene_audio?: boolean;
+  /** true mientras falte subir la foto, la nota de voz o mandar la ubicación */
   extras_pendientes?: boolean;
 };
 
 /** Foto del medidor guardada en el celular hasta que se sube. */
 export type FotoLocal = { lectura_id: string; blob: Blob; creada_at: string };
+
+/** Nota de voz de la lectura, guardada en el celular hasta que se sube. */
+export type AudioLocal = { lectura_id: string; blob: Blob; tipo: string; creada_at: string };
 
 export type Meta =
   | { clave: 'descarga'; operador_id: string; periodo: Periodo | null; umbral: number; foto_obligatoria?: boolean; localidad?: string; fecha: string; cantidad: number }
@@ -60,6 +64,7 @@ export class BaseLocal extends Dexie {
   lecturas!: EntityTable<LecturaLocal, 'id'>;
   meta!: Table<Meta, string>;
   fotos!: EntityTable<FotoLocal, 'lectura_id'>;
+  audios!: EntityTable<AudioLocal, 'lectura_id'>;
 
   constructor() {
     super('lecturas-medidores');
@@ -69,6 +74,7 @@ export class BaseLocal extends Dexie {
       meta: 'clave',
     });
     this.version(2).stores({ fotos: 'lectura_id' });
+    this.version(3).stores({ audios: 'lectura_id' });
   }
 }
 

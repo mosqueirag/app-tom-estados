@@ -8,6 +8,8 @@ import { mensajeError } from '@/lib/consultas';
 import { Aviso } from '@/components/ui';
 import { ActivarAvisos } from '@/components/ActivarAvisos';
 import { MensajesOperador } from '@/components/MensajesOperador';
+import { ResumenDia } from '@/components/ResumenDia';
+import { PreferenciasPantalla } from '@/components/PreferenciasPantalla';
 
 export default function InicioOperador() {
   const auth = useAuth();
@@ -127,6 +129,8 @@ export default function InicioOperador() {
 
       {mensaje && <Aviso tono={mensaje.tono}>{mensaje.texto}</Aviso>}
 
+      {periodo && auth.estado === 'con_sesion' && <ResumenDia operadorId={auth.perfil.id} periodoId={periodo.id} nombre={nombre} />}
+
       <Aviso tono={esIOS() ? 'alerta' : 'info'}>
         <strong>Importante:</strong> las lecturas se envían solo con la app abierta y con señal
         {esIOS() ? ' (el iPhone no permite enviar en segundo plano)' : ''}. Antes de terminar el día, abrí la app con señal y
@@ -136,6 +140,8 @@ export default function InicioOperador() {
       <Link to="/operador/buscar" className="boton-primario w-full">
         Buscar cuenta para leer
       </Link>
+      <PreferenciasPantalla />
+
       <button onClick={() => void salir()} className="boton-secundario w-full">
         Cerrar sesión
       </button>

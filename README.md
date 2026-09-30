@@ -89,6 +89,8 @@ funciones. Están en la carpeta `supabase/migrations` y **hay que ejecutarlas en
    | 9 | `20260930000009_lecturas_en_vivo.sql` |
    | 10 | `20260930000010_fotos_y_ubicacion.sql` |
    | 11 | `20260930000011_orden_de_recorrido.sql` |
+   | 12 | `20260930000012_mensajes_auditoria_y_voz.sql` |
+   | 13 | `20260930000013_permisos_mensajes_auditoria.sql` |
 
 6. **Datos de ejemplo (opcional):** si querés probar la app con 10 cuentas de prueba y un
    período "Octubre 2026", ejecutá también `supabase/seed.sql`. Para uso real no hace falta:
@@ -323,7 +325,7 @@ cuentas.
    Para restaurar: `gpg -d copia-AAAA-MM-DD.dump.gpg > copia.dump` y
    `pg_restore --clean --if-exists --no-owner -d "<cadena de conexión>" copia.dump`.
 
-Las fotos no entran en ninguna de las dos copias: quedan en Supabase Storage.
+Las fotos y las notas de voz no entran en ninguna de las dos copias: quedan en Supabase Storage.
 
 ### Orden de recorrido
 
@@ -363,6 +365,33 @@ pantalla de inicio de la app, y aceptar el permiso.
 - Si un operador no activó los avisos, al asignarle una ruta la pantalla te lo dice para que
   le avises vos.
 
+### Seguimiento del día y mensajes
+
+- **Avance de hoy por operador** (en el **Panel**): lecturas de hoy, hora de la última (en
+  naranja si hace más de una hora que no carga), lecturas por hora y cuentas pendientes de cada
+  uno. Se actualiza solo con cada lectura que llega.
+- **Pasar pendientes** (en **Operadores**): si un operador faltó, sus cuentas que todavía no
+  leyó en el período pasan a otro con un clic. Las que ya leyó se quedan con él. Al que las
+  recibe le llega un aviso para descargarlas.
+- **Mensajes a operadores:** desde el Panel (botón **Mensaje** en cada operador, o **Mensaje a
+  todos**) o desde **Operadores → Mandar mensaje**. Llega como notificación al celular y queda
+  en el Inicio de la app, también sin señal, hasta que el operador toca **Entendido**.
+- **Historial** (menú de la izquierda): quién creó, cambió o dio de baja cada cuenta y cada
+  operador, con fecha, hora y qué cambió. Se puede buscar por número de cuenta o por persona.
+- **Comparación de consumo** (en **Períodos**): consumo total por ruta contra el período
+  anterior, con la diferencia y el porcentaje. Marca las rutas que cambiaron más de 20%.
+
+### Etiquetas QR y lector de códigos
+
+En **Cuentas → Etiquetas QR** se descarga un PDF con una etiqueta por cuenta (24 por hoja A4,
+de 70 × 37 mm) con el código QR, el número, el titular, la dirección y el medidor. Se imprime en
+hojas autoadhesivas y se pega en cada medidor. Usa el filtro de la pantalla: si elegís una ruta,
+salen solo esas.
+
+En el celular, **Buscar → Escanear** abre la cámara y lee el QR de la etiqueta (o el código de
+barras que traiga el medidor, si coincide con el número de medidor cargado) y abre la cuenta
+directamente. Funciona en Android y en iPhone.
+
 ---
 
 ## 11. Trabajo diario del operador
@@ -380,6 +409,19 @@ pantalla de inicio de la app, y aceptar el permiso.
 4. **Las lecturas se envían solas** cuando hay señal y la app está abierta: al abrirla, cuando
    vuelve la señal, cada 2 minutos, o con el botón **Sincronizar ahora**.
 5. **Al terminar el día:** abrir la app con señal y verificar que diga **"todo enviado"**.
+   En **Inicio → Resumen de hoy** se ven las leídas, las que no se pudieron leer (agrupadas
+   por motivo) y las pendientes. Con **Compartir** se manda por WhatsApp.
+
+**Más ayudas para el operador:**
+
+- **Nota de voz:** al cargar una lectura se puede grabar una nota de hasta un minuto en lugar
+  de escribir la observación. Se sube al sincronizar y el admin la escucha en **Lecturas**
+  (botón 🎙️ Nota) o en el **Mapa**. Se guarda en el bucket privado `notas-voz`.
+- **Escanear** el código QR del medidor para abrir la cuenta sin escribir (ver Etiquetas QR).
+- **Modo oscuro y letra grande:** en **Inicio → Pantalla**. Quedan guardados en ese celular.
+- **Aviso de batería baja:** si el celular tiene 20% o menos, no está cargando y hay lecturas
+  sin enviar, aparece un aviso rojo arriba para que las envíe. **Solo en Android:** el iPhone
+  no deja que las páginas web lean la batería, así que ahí no aparece.
 
 > ⚠️ **iPhone:** el iPhone no permite que la app envíe datos en segundo plano. Las lecturas se
 > envían **solo con la app abierta**. En Android conviene hacer lo mismo.

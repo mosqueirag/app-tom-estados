@@ -51,3 +51,82 @@ body {
     @apply mb-1 block text-sm font-medium text-slate-700;
   }
 }
+
+/* ---------------------------------------------------------------------
+   Modo oscuro y letra grande (preferencias del celular, ver lib/preferencias.ts).
+   En vez de duplicar clases, se redefinen los colores que usa Tailwind.
+   --------------------------------------------------------------------- */
+html.letra-grande {
+  font-size: 118.75%; /* 19 px: todo lo que está en rem crece junto */
+}
+
+html.oscuro {
+  color-scheme: dark;
+  --color-slate-50: #0b1220;
+  --color-slate-100: #1a2436;
+  --color-slate-200: #2a3649;
+  --color-slate-300: #475569;
+  --color-slate-400: #7b8aa0;
+  --color-slate-500: #94a3b8;
+  --color-slate-600: #aab6c7;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #f1f5f9;
+  --color-marca-50: #042f2c;
+  --color-marca-100: #134e4a;
+  --color-marca-700: #5eead4;
+  --color-marca-800: #99f6e4;
+  --color-emerald-50: #052e1f;
+  --color-emerald-100: #064e3b;
+  --color-emerald-200: #065f46;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+  --color-amber-50: #33240a;
+  --color-amber-100: #4a3606;
+  --color-amber-200: #78520b;
+  --color-amber-300: #92650f;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+  --color-amber-950: #fffbeb;
+  --color-red-50: #3b0d0d;
+  --color-red-100: #4c1212;
+  --color-red-200: #7f1d1d;
+  --color-red-300: #991b1b;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-red-900: #fee2e2;
+  --color-sky-50: #082f49;
+  --color-sky-100: #0c3a5a;
+  --color-sky-200: #075985;
+  --color-sky-700: #7dd3fc;
+  --color-sky-800: #bae6fd;
+  --color-sky-900: #e0f2fe;
+  --color-violet-100: #2e1065;
+  --color-violet-800: #ddd6fe;
+}
+html.oscuro .bg-white {
+  background-color: #1e293b;
+}
+html.oscuro .bg-white\/95 {
+  background-color: rgb(30 41 59 / 0.95);
+}
+html.oscuro .bg-white\/80 {
+  background-color: rgb(30 41 59 / 0.8);
+}
+html.oscuro .bg-white\/70 {
+  background-color: rgb(30 41 59 / 0.7);
+}
+html.oscuro .boton-primario:hover {
+  background-color: #0f766e;
+}
+html.oscuro .boton-peligro {
+  background-color: #dc2626;
+}
+/* El logo tiene letras oscuras: se le deja un fondo claro */
+html.oscuro img[src*='coopsar'] {
+  background: #fff;
+  border-radius: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  box-sizing: content-box;
+}

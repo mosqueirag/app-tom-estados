@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { VerFoto } from '@/components/VerFoto';
+import { EscucharNota } from '@/components/EscucharNota';
 import { HistorialConsumo } from '@/components/HistorialConsumo';
 import { linkMapa } from '@/lib/ubicacion';
 import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
@@ -40,6 +41,7 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
   const [pagina, setPagina] = useState(0);
   const [corrigiendo, setCorrigiendo] = useState<VLectura | null>(null);
   const [foto, setFoto] = useState<VLectura | null>(null);
+  const [nota, setNota] = useState<VLectura | null>(null);
   const [historial, setHistorial] = useState<VLectura | null>(null);
   const clave = JSON.stringify(filtros);
   const [claveAnterior, setClaveAnterior] = useState(clave);
@@ -122,7 +124,12 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
                         Mapa
                       </a>
                     )}
-                    {!l.foto_path && l.latitud === null && <span className="text-xs text-slate-400">—</span>}
+                    {l.audio_path && (
+                      <button className="boton-chico mr-1" onClick={() => setNota(l)} aria-label={`Escuchar nota de voz de ${l.numero_cuenta}`}>
+                        🎙️ Nota
+                      </button>
+                    )}
+                    {!l.foto_path && !l.audio_path && l.latitud === null && <span className="text-xs text-slate-400">—</span>}
                   </td>
                   <td className="whitespace-nowrap text-right">
                     <button className="boton-chico mr-1" onClick={() => setHistorial(l)}>
@@ -151,6 +158,11 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
       <HistorialConsumo
         cuenta={historial ? { id: historial.cuenta_id, numero_cuenta: historial.numero_cuenta, titular: historial.titular } : null}
         alCerrar={() => setHistorial(null)}
+      />
+      <EscucharNota
+        titulo={nota ? `Nota de voz · cuenta ${nota.numero_cuenta}` : ''}
+        path={nota?.audio_path ?? null}
+        alCerrar={() => setNota(null)}
       />
       <VerFoto titulo={foto ? `Cuenta ${foto.numero_cuenta} · ${fmtFechaHora(foto.fecha_lectura)}` : ''} path={foto?.foto_path ?? null} alCerrar={() => setFoto(null)} />
       <CorregirLectura

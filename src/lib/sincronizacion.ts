@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { db, leerDescarga, type CuentaLocal, type LecturaLocal } from './db';
 import { mensajeError, traerTodo } from './consultas';
 import { BUCKET_FOTOS, rutaFoto } from './fotos';
+import { BUCKET_VOZ, rutaAudio, tipoBase } from './notasVoz';
 import type { LecturaParaSincronizar } from '@/types/database';
 
 const LOTE = 100;
@@ -110,7 +111,10 @@ async function enviarExtras(operadorId: string) {
   );
   if (!conExtras.length) return;
 
-  const listos: { lectura: LecturaLocal; item: { id: string; latitud: number | null; longitud: number | null; precision: number | null; foto_path: string | null } }[] = [];
+  const listos: {
+    lectura: LecturaLocal;
+    item: { id: string; latitud: number | null; longitud: number | null; precision: number | null; foto_path: string | null; audio_path: string | null };
+  }[] = [];
   for (const l of conExtras) {
     let fotoPath: string | null = null;
     if (l.tiene_foto) {
@@ -126,19 +130,41 @@ async function enviarExtras(operadorId: string) {
         }
       }
     }
+    let audioPath: string | null = null;
+    if (l.tiene_audio) {
+      const audio = await db.audios.get(l.id);
+      if (audio) {
+        audioPath = rutaAudio(operadorId, l.id, audio.tipo);
+        const { error } = await supabase.storage
+          .from(BUCKET_VOZ)
+          .upload(audioPath, audio.blob, { upsert: true, contentType: tipoBase(audio.tipo), cacheControl: '31536000' });
+        if (error) {
+          if (esErrorDeConexion(error)) throw error;
+          continue; // se reintenta en la próxima sincronización
+        }
+      }
+    }
     listos.push({
       lectura: l,
-      item: { id: l.id, latitud: l.latitud ?? null, longitud: l.longitud ?? null, precision: l.precision_gps ?? null, foto_path: fotoPath },
+      item: {
+        id: l.id,
+        latitud: l.latitud ?? null,
+        longitud: l.longitud ?? null,
+        precision: l.precision_gps ?? null,
+        foto_path: fotoPath,
+        audio_path: audioPath,
+      },
     });
   }
   for (let i = 0; i < listos.length; i += LOTE) {
     const lote = listos.slice(i, i + LOTE);
     const { error } = await supabase.rpc('registrar_extras_lecturas', { p_extras: lote.map((x) => x.item) });
     if (error) throw error;
-    await db.transaction('rw', db.lecturas, db.fotos, async () => {
+    await db.transaction('rw', db.lecturas, db.fotos, db.audios, async () => {
       for (const { lectura } of lote) {
         await db.lecturas.update(lectura.id, { extras_pendientes: false });
         await db.fotos.delete(lectura.id);
+        await db.audios.delete(lectura.id);
       }
     });
   }
@@ -227,17 +253,26 @@ export async function descargarCuentas(operadorId: string): Promise<{ cantidad: 
 }
 
 /** Guarda una lectura confirmada en el celular con estado "pendiente" (y su foto, si hay una nueva). */
-export async function guardarLecturaLocal(l: Omit<LecturaLocal, 'estado' | 'mensaje' | 'enviada_at' | 'intentos'>, foto?: Blob | null) {
+export async function guardarLecturaLocal(
+  l: Omit<LecturaLocal, 'estado' | 'mensaje' | 'enviada_at' | 'intentos'>,
+  foto?: Blob | null,
+  audio?: { blob: Blob; tipo: string } | null,
+) {
   const existente = await db.lecturas.where({ periodo_id: l.periodo_id, cuenta_id: l.cuenta_id }).filter((x) => x.operador_id === l.operador_id).first();
   if (existente && existente.id !== l.id) throw new Error('Esta cuenta ya fue leída en este período desde este celular.');
   if (existente && existente.estado !== 'pendiente') throw new Error('Esta lectura ya fue enviada y no se puede modificar desde el celular.');
   const tieneFoto = Boolean(foto) || Boolean(existente?.tiene_foto);
-  await db.transaction('rw', db.lecturas, db.fotos, async () => {
+  // audio === null: se borró la nota; undefined: se deja la que había
+  const tieneAudio = audio === undefined ? Boolean(existente?.tiene_audio) : audio !== null;
+  await db.transaction('rw', db.lecturas, db.fotos, db.audios, async () => {
     if (foto) await db.fotos.put({ lectura_id: l.id, blob: foto, creada_at: new Date().toISOString() });
+    if (audio) await db.audios.put({ lectura_id: l.id, blob: audio.blob, tipo: audio.tipo, creada_at: new Date().toISOString() });
+    else if (audio === null) await db.audios.delete(l.id);
     await db.lecturas.put({
       ...l,
       tiene_foto: tieneFoto,
-      extras_pendientes: tieneFoto || l.latitud != null,
+      tiene_audio: tieneAudio,
+      extras_pendientes: tieneFoto || tieneAudio || l.latitud != null,
       estado: 'pendiente',
       mensaje: null,
       enviada_at: null,

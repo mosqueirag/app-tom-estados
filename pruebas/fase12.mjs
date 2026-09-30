@@ -134,8 +134,8 @@ await intentar('Mensaje a todos desde Operadores', async () => {
   await d.getByRole('textbox').fill('Mañana no se sale por lluvia');
   await d.getByRole('button', { name: 'Enviar' }).click();
   await main.getByText('Últimos mensajes enviados').waitFor();
-  await main.getByText('Mañana no se sale por lluvia').waitFor();
-  const lista = await main.locator('section, div', { hasText: 'Últimos mensajes enviados' }).last().textContent();
+  await main.locator('li', { hasText: 'Mañana no se sale por lluvia' }).getByText(/para todos/).waitFor();
+  const lista = (await main.locator('li', { hasText: /para (todos|Juan)/ }).allTextContents()).join(' | ');
   ok('Operadores: lista los mensajes enviados con destinatario', lista.includes('para todos') && lista.includes('para Juan Pérez'), lista.slice(0, 200));
 });
 

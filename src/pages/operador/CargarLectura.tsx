@@ -6,6 +6,7 @@ import { fmtFecha, fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { guardarLecturaLocal } from '@/lib/sincronizacion';
 import { nuevoUuid } from '@/lib/uuid';
 import { comprimirFoto } from '@/lib/fotos';
+import { GrabarNota, type Nota } from '@/components/GrabarNota';
 import { obtenerUbicacion, type Ubicacion } from '@/lib/ubicacion';
 import { OBSERVACIONES_RAPIDAS, validarLectura } from '@/lib/validarLectura';
 import { useAuth } from '@/auth/contexto';
@@ -43,12 +44,20 @@ export default function CargarLectura() {
   const [guardando, setGuardando] = useState(false);
   const [precargado, setPrecargado] = useState(false);
   const [foto, setFoto] = useState<Blob | null>(null);
+  // undefined: no se tocó (queda la que había guardada); null: se borró
+  const [nota, setNota] = useState<Nota | null | undefined>(undefined);
   const [procesandoFoto, setProcesandoFoto] = useState(false);
   const [ubicacion, setUbicacion] = useState<Ubicacion | null | 'buscando'>('buscando');
 
   // Foto ya guardada de una lectura pendiente (se puede cambiar)
   const fotoGuardada = useLiveQuery(async () => (previa?.tiene_foto ? ((await db.fotos.get(previa.id))?.blob ?? null) : null), [previa?.id, previa?.tiene_foto]);
   const fotoVisible = foto ?? fotoGuardada ?? null;
+  const notaGuardada = useLiveQuery(async () => {
+    if (!previa?.tiene_audio) return null;
+    const a = await db.audios.get(previa.id);
+    return a ? { blob: a.blob, tipo: a.tipo } : null;
+  }, [previa?.id, previa?.tiene_audio]);
+  const notaVisible = nota === undefined ? (notaGuardada ?? null) : nota;
   const [urlFoto, setUrlFoto] = useState<string | null>(null);
   useEffect(() => {
     if (!fotoVisible) return setUrlFoto(null);
@@ -91,7 +100,7 @@ export default function CargarLectura() {
     }
   }, [previa, precargado]);
 
-  if (cuenta === undefined || previa === undefined || fotoGuardada === undefined) return <Cargando />;
+  if (cuenta === undefined || previa === undefined || fotoGuardada === undefined || notaGuardada === undefined) return <Cargando />;
   if (!cuenta) return <Aviso tono="error">No se encontró la cuenta en el celular. Volvé a descargar las cuentas.</Aviso>;
   if (!periodo) return <Aviso tono="alerta">No hay un período abierto. Descargá las cuentas de nuevo cuando el administrador lo abra.</Aviso>;
 
@@ -165,7 +174,7 @@ export default function CargarLectura() {
         latitud: gps?.latitud ?? previa?.latitud ?? null,
         longitud: gps?.longitud ?? previa?.longitud ?? null,
         precision_gps: gps?.precision ?? previa?.precision_gps ?? null,
-      }, foto);
+      }, foto, nota);
       if (navigator.onLine) void sync.sincronizarAhora();
       navegar('/operador/buscar', { replace: true, state: { guardada: cuenta!.numero_cuenta } });
     } catch (e) {
@@ -205,7 +214,8 @@ export default function CargarLectura() {
           <div className="mt-3 flex items-center gap-3 text-sm text-slate-600">
             {urlFoto && <img src={urlFoto} alt="Foto del medidor" className="size-16 rounded-lg object-cover" />}
             <span>
-              {urlFoto ? 'Con foto' : 'Sin foto'} · <TextoUbicacion ubicacion={ubicacion} />
+              {urlFoto ? 'Con foto' : 'Sin foto'}
+              {notaVisible ? ' · Con nota de voz' : ''} · <TextoUbicacion ubicacion={ubicacion} />
             </span>
           </div>
         </div>
@@ -311,6 +321,7 @@ export default function CargarLectura() {
         <p className="mt-3 text-xs text-slate-500">
           <TextoUbicacion ubicacion={ubicacion} />
         </p>
+        <GrabarNota nota={notaVisible} alCambiar={setNota} />
       </section>
 
       {error && <Aviso tono="error">{error}</Aviso>}

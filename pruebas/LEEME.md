@@ -16,6 +16,9 @@ Son para quien mantenga el código (no hace falta correrlas para usar la app).
 | `fase8.mjs` | Foto del medidor (con y sin señal, obligatoria), GPS, foto y mapa en el admin | 17 |
 | `fase9.mjs` | Orden de recorrido por ruta, pestaña Recorrido, Cómo llegar con localidad o GPS | 9 |
 | `fase10.mjs` | Historial de consumo, reporte PDF del período y copia de seguridad en Excel | 12 |
+| `fase11.mjs` | Pasar pendientes a otro operador, etiquetas QR y lector de QR con cámara simulada | 11 |
+| `fase12.mjs` | Avance por operador, mensajes a operadores (también sin señal), historial de cambios y comparación de períodos | 15 |
+| `fase13.mjs` | Modo oscuro y letra grande, aviso de batería baja, nota de voz (grabar, subir y escuchar) y resumen del día | 14 |
 
 ## Cómo se corren
 
