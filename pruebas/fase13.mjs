@@ -94,7 +94,8 @@ const ok = (n, c, extra = '') => resultados.push(`${c ? '✓' : '✗'} ${n}${ext
 const intentar = async (n, fn) => { try { await fn(); } catch (e) { ok(n, false, e.message.split('\n')[0]); console.log('DBG', n, page.url(), (await page.locator('main').textContent({ timeout: 2000 }).catch(() => '')).slice(0, 400)); } };
 
 const JUAN = USERS['jperez@usuarios.lecturas.app'];
-psql(`update cuentas set ruta='Ruta 1', operador_id='${JUAN}' where numero_cuenta between '10001' and '10005';
+psql(`update rutas set operador_id='${JUAN}' where nombre='Ruta 1';
+      update cuentas set ruta='Ruta 1', operador_id='${JUAN}' where numero_cuenta between '10001' and '10005';
       update cuentas set ruta='Ruta 2', operador_id='${USERS['mgomez@usuarios.lecturas.app']}' where numero_cuenta between '10006' and '10010';
       insert into periodos (nombre) select 'Octubre 2026' where not exists (select 1 from periodos where activo);`);
 

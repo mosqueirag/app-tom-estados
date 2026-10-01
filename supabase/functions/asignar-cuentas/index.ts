@@ -3,6 +3,8 @@
 //   ruta       → asigna todas las cuentas activas de esa ruta
 //   rutas      → lo mismo con varias rutas a la vez (un solo aviso)
 //   cuenta_ids → asigna esas cuentas
+//   Con ruta/rutas además queda guardado el operador de la ruta: las cuentas
+//   que se carguen después en esa ruta le llegan solas.
 //   operador_id null → las deja sin asignar
 // Después avisa al operador con una notificación push en su celular.
 //
@@ -324,8 +326,15 @@ Deno.serve(async (req) => {
       operadorNombre = op.nombre;
     }
 
-    let consulta = usuario.from('cuentas').update({ operador_id: operadorId });
     if (rutas !== null && rutas.length > 1 && rutas.includes('')) return error('Asigná las cuentas sin ruta por separado.');
+    if (rutas !== null && rutas[0] !== '') {
+      const { error: e0 } = await usuario
+        .from('rutas')
+        .upsert(rutas.map((nombre) => ({ nombre, operador_id: operadorId })), { onConflict: 'nombre' });
+      if (e0) return error(`No se pudo guardar la ruta: ${e0.message}`, 500);
+    }
+
+    let consulta = usuario.from('cuentas').update({ operador_id: operadorId });
     if (rutas === null) consulta = consulta.in('id', cuentaIds);
     else consulta = (rutas.length === 1 ? consulta.eq('ruta', rutas[0]) : consulta.in('ruta', rutas)).eq('activa', true);
     const { data: cambiadas, error: e1 } = await consulta.select('id');
@@ -340,9 +349,20 @@ Deno.serve(async (req) => {
           : `${nombres.slice(0, -1).join(', ')} y ${nombres.at(-1)}`
         : `${cantidad} cuenta${cantidad === 1 ? '' : 's'}`;
     if (!operadorId) {
+      if (rutas !== null && rutas[0] !== '') {
+        return json({ actualizadas: cantidad, mensaje: `${que[0].toUpperCase()}${que.slice(1)} ${rutas.length === 1 ? 'quedó' : 'quedaron'} sin operador.` });
+      }
       return json({ actualizadas: cantidad, mensaje: `Quedaron sin asignar ${cantidad} cuenta${cantidad === 1 ? '' : 's'}.` });
     }
-    if (!cantidad) return json({ actualizadas: 0, mensaje: 'No había cuentas para asignar.' });
+    if (!cantidad) {
+      if (rutas !== null && rutas[0] !== '') {
+        return json({
+          actualizadas: 0,
+          mensaje: `${que[0].toUpperCase()}${que.slice(1)} ${rutas.length === 1 ? 'quedó' : 'quedaron'} a cargo de ${operadorNombre}. Todavía no tiene${rutas.length === 1 ? '' : 'n'} cuentas: las que cargues ahí le van a llegar solas.`,
+        });
+      }
+      return json({ actualizadas: 0, mensaje: 'No había cuentas para asignar.' });
+    }
 
     const aviso = {
       titulo: 'Tenés cuentas nuevas para leer',
@@ -360,7 +380,9 @@ Deno.serve(async (req) => {
     return json({
       actualizadas: cantidad,
       avisos_enviados: r.enviados,
-      mensaje: `Se asignaron ${cantidad} cuenta${cantidad === 1 ? '' : 's'} a ${operadorNombre}. ${detalle}`,
+      mensaje: `Se asignaron ${cantidad} cuenta${cantidad === 1 ? '' : 's'} a ${operadorNombre}.${
+        rutas !== null && rutas[0] !== '' ? ' Las cuentas nuevas de esa ruta también le van a llegar solas.' : ''
+      } ${detalle}`,
     });
   } catch (e) {
     if (e instanceof ErrorHttp) return error(e.message, e.status);

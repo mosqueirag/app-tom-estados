@@ -91,6 +91,7 @@ funciones. Están en la carpeta `supabase/migrations` y **hay que ejecutarlas en
    | 11 | `20260930000011_orden_de_recorrido.sql` |
    | 12 | `20260930000012_mensajes_auditoria_y_voz.sql` |
    | 13 | `20260930000013_permisos_mensajes_auditoria.sql` |
+   | 14 | `20260930000014_rutas_con_operador.sql` |
 
 6. **Datos de ejemplo (opcional):** si querés probar la app con 10 cuentas de prueba y un
    período "Octubre 2026", ejecutá también `supabase/seed.sql`. Para uso real no hace falta:
@@ -287,19 +288,30 @@ de nuevo para ver los cambios.
 ### Asignar rutas a los operadores
 
 1. Cargá la ruta de cada cuenta (columna `ruta` del Excel, o **Cuentas → Editar**).
-2. Abrí **Rutas**. Hay una fila por ruta con la cantidad de cuentas y las pendientes del período.
-3. En la columna **Operador** elegí quién lee esa ruta. Se le asignan todas las cuentas activas
-   de la ruta y le llega un aviso al celular: "Tenés cuentas nuevas para leer". Al tocarlo, la
-   app se abre y descarga las cuentas sola.
-4. Para una sola cuenta: **Cuentas → Editar → Operador**.
-5. Un operador puede tener **varias rutas**: en **Operadores → Asignar rutas** marcá todas las
+2. Abrí **Rutas**. Ya vienen cargadas de la **Ruta 1** a la **Ruta 20** (podés agregar otras
+   abajo de la tabla). Hay una fila por ruta con la cantidad de cuentas y las pendientes del período.
+3. En la columna **Operador** elegí quién lee cada ruta y tocá **Guardar cambios** (podés cambiar
+   varias de una vez). Se le asignan todas las cuentas activas de la ruta y le llega un aviso al
+   celular: "Tenés cuentas nuevas para leer". Al tocarlo, la app se abre y descarga las cuentas sola.
+   Arriba de la tabla ves qué rutas le quedan a cada operador.
+4. El operador queda guardado en la ruta: toda cuenta que se cargue en esa ruta (a mano o por
+   Excel), o que se pase a esa ruta, va sola a ese operador.
+5. Para una sola cuenta: **Cuentas → Editar → Operador**.
+6. Un operador puede tener **varias rutas**: en **Operadores → Asignar rutas** marcá todas las
    que lee. Le llega un solo aviso con las rutas nuevas.
-6. Al crear una cuenta nueva hay que elegir el operador. Si la ruta ya tiene operador, se elige
+7. Al crear una cuenta nueva hay que elegir el operador. Si la ruta ya tiene operador, se elige
    solo. Las cuentas nuevas del Excel también quedan del operador de su ruta.
 
 **Siempre que el admin le manda datos a un operador le llega un aviso:** al asignarle una ruta
 o una cuenta, al crear una cuenta en su ruta (a mano o por Excel) y al modificar una de sus
 cuentas.
+
+### Panel de inicio y carga rápida
+
+El **Panel** tiene accesos rápidos (cargar lecturas, nueva cuenta, importar Excel, rutas, nuevo
+operador y mandar mensaje), el porcentaje leído, las lecturas de hoy y un aviso si hay rutas sin
+operador. En **Carga rápida de lecturas** escribís el número de cuenta, Enter, la lectura y Enter:
+la lectura queda guardada a tu nombre y el cursor vuelve al número para seguir con la próxima.
 
 ### Historial de consumo y reporte del período
 

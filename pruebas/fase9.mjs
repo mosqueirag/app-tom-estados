@@ -56,6 +56,7 @@ async function mock(route) {
     if (b.avisar) return json(route, 200, { avisos_enviados: 0, mensaje: `Aviso ${b.avisar} de ${b.cuenta_ids.length}.` });
     if (b.rutas) b.ruta = b.rutas.join("','");
     const op = b.operador_id ? `'${b.operador_id}'` : 'null';
+    if (b.ruta) psql(`update rutas set operador_id=${op} where nombre in ('${b.ruta}')`);
     const donde = b.ruta !== undefined ? `ruta in ('${b.ruta}') and activa` : `id in (${b.cuenta_ids.map((i) => `'${i}'`).join(',')})`;
     const n = psql(`with u as (update cuentas set operador_id=${op} where ${donde} returning 1) select count(*) from u`);
     return json(route, 200, { actualizadas: Number(n), mensaje: `Se asignaron ${n} cuentas.` });
@@ -69,7 +70,8 @@ const intentar = async (n, fn) => { try { await fn(); } catch (e) { ok(n, false,
 
 
 const JUAN = USERS['jperez@usuarios.lecturas.app'];
-psql(`update cuentas set ruta='Ruta 1', operador_id='${JUAN}' where numero_cuenta between '10001' and '10005';
+psql(`update rutas set operador_id='${JUAN}' where nombre='Ruta 1';
+      update cuentas set ruta='Ruta 1', operador_id='${JUAN}' where numero_cuenta between '10001' and '10005';
       update cuentas set ruta='Ruta 2', operador_id='${JUAN}' where numero_cuenta between '10006' and '10008';
       update cuentas set latitud=-34.5, longitud=-58.5 where numero_cuenta='10004';`);
 
@@ -93,7 +95,7 @@ await intentar('Admin ordena la ruta', async () => {
   ok('Panel: guarda la localidad', psql('select localidad from configuracion') === 'San Rafael, Mendoza');
 
   await page.getByRole('navigation').getByRole('link', { name: 'Rutas' }).click();
-  await main.locator('tbody tr', { hasText: 'Ruta 1' }).waitFor();
+  await main.getByRole('row', { name: /^Ruta 1 / }).waitFor();
   await main.getByRole('button', { name: 'Ordenar recorrido de Ruta 1' }).click();
   const d = page.getByRole('dialog');
   await d.getByText('10005').waitFor();

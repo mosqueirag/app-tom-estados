@@ -6,6 +6,7 @@ import { fmtFecha, fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
 import { descargarCopiaDeSeguridad } from '@/lib/copiaSeguridad';
 import { AvanceOperadores } from '@/components/AvanceOperadores';
+import { CargaRapida } from '@/components/CargaRapida';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, BarraProgreso, Cargando, Encabezado, Insignia, Tarjeta } from '@/components/ui';
 import type { Configuracion, Periodo, ResumenPeriodo, VLectura } from '@/types/database';
@@ -15,7 +16,18 @@ type DatosPanel = {
   resumen: ResumenPeriodo | null;
   alertas: VLectura[];
   config: Configuracion | null;
+  hoy: number;
+  rutasSinOperador: string[];
 };
+
+const ACCESOS = [
+  { a: '#carga-rapida', texto: 'Cargar lecturas', icono: '⌨️' },
+  { a: '/admin/cuentas?accion=nueva', texto: 'Nueva cuenta', icono: '➕' },
+  { a: '/admin/cuentas?accion=importar', texto: 'Importar Excel', icono: '📥' },
+  { a: '/admin/rutas', texto: 'Rutas y operadores', icono: '🗺️' },
+  { a: '/admin/operadores?accion=nuevo', texto: 'Nuevo operador', icono: '👤' },
+  { a: '/admin/operadores?accion=mensaje', texto: 'Mandar mensaje', icono: '💬' },
+];
 
 export default function PanelAdmin() {
   const panel = useConsulta<DatosPanel>(async () => {
@@ -25,9 +37,13 @@ export default function PanelAdmin() {
     ]);
     if (e1) throw e1;
     if (e2) throw e2;
-    if (!periodo) return { periodo: null, resumen: null, alertas: [], config };
+    const { data: rutas } = await supabase.from('v_rutas').select('ruta, cuentas, operador_id, orden').neq('ruta', '').order('orden');
+    const rutasSinOperador = (rutas ?? []).filter((r) => !r.operador_id).map((r) => r.ruta);
+    if (!periodo) return { periodo: null, resumen: null, alertas: [], config, hoy: 0, rutasSinOperador };
 
-    const [{ data: resumen, error: e3 }, { data: alertas, error: e4 }] = await Promise.all([
+    const inicioHoy = new Date();
+    inicioHoy.setHours(0, 0, 0, 0);
+    const [{ data: resumen, error: e3 }, { data: alertas, error: e4 }, { count: hoy }] = await Promise.all([
       supabase.rpc('resumen_periodo', { p_periodo_id: periodo.id }),
       supabase
         .from('v_lecturas')
@@ -36,16 +52,22 @@ export default function PanelAdmin() {
         .or('alerta_menor_anterior.eq.true,alerta_consumo_anomalo.eq.true,alerta_sin_lectura.eq.true')
         .order('fecha_lectura', { ascending: false })
         .limit(8),
+      supabase
+        .from('lecturas')
+        .select('id', { count: 'exact', head: true })
+        .eq('periodo_id', periodo.id)
+        .gte('fecha_lectura', inicioHoy.toISOString()),
     ]);
     if (e3) throw e3;
     if (e4) throw e4;
-    return { periodo, resumen: resumen as unknown as ResumenPeriodo, alertas: alertas ?? [], config };
+    return { periodo, resumen: resumen as unknown as ResumenPeriodo, alertas: alertas ?? [], config, hoy: hoy ?? 0, rutasSinOperador };
   }, []);
   useAlCambiarLecturas(() => void panel.recargar());
 
   if (panel.cargando && !panel.datos) return <Cargando />;
   if (panel.error) return <Aviso tono="error">{panel.error}</Aviso>;
-  const { periodo, resumen, alertas, config } = panel.datos!;
+  const { periodo, resumen, alertas, config, hoy, rutasSinOperador } = panel.datos!;
+  const porcentaje = resumen && resumen.cuentas_activas ? Math.round((resumen.lecturas / resumen.cuentas_activas) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -54,6 +76,41 @@ export default function PanelAdmin() {
           Actualizar
         </button>
       </Encabezado>
+
+      <div role="group" aria-label="Accesos rápidos" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {ACCESOS.filter((x) => periodo || x.a !== '#carga-rapida').map((x) =>
+          x.a.startsWith('#') ? (
+            <a
+              key={x.a}
+              href={x.a}
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(x.a.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.querySelector<HTMLInputElement>('[aria-label="Número de cuenta para carga rápida"]')?.focus();
+              }}
+              className="acceso-rapido"
+            >
+              <span aria-hidden="true" className="text-xl">{x.icono}</span>
+              {x.texto}
+            </a>
+          ) : (
+            <Link key={x.a} to={x.a} className="acceso-rapido">
+              <span aria-hidden="true" className="text-xl">{x.icono}</span>
+              {x.texto}
+            </Link>
+          ),
+        )}
+      </div>
+
+      {rutasSinOperador.length > 0 && (
+        <Aviso tono="info">
+          {rutasSinOperador.length === 1 ? 'La' : 'Hay'} {rutasSinOperador.length === 1 ? rutasSinOperador[0] : `${rutasSinOperador.length} rutas`}{' '}
+          {rutasSinOperador.length === 1 ? 'no tiene' : 'sin'} operador.{' '}
+          <Link to="/admin/rutas" className="font-medium underline">
+            {rutasSinOperador.length === 1 ? 'Asignala' : 'Asignalas'} en Rutas
+          </Link>
+        </Aviso>
+      )}
 
       {!periodo || !resumen ? (
         <Tarjeta>
@@ -73,9 +130,17 @@ export default function PanelAdmin() {
               </div>
               <p className="text-sm text-slate-500">Desde el {fmtFecha(periodo.fecha_inicio)}</p>
             </div>
-            <p className="mt-4 text-lg">
-              <strong>{fmtNumero(resumen.lecturas)}</strong> de <strong>{fmtNumero(resumen.cuentas_activas)}</strong> cuentas leídas
-            </p>
+            <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-lg">
+                <strong>{fmtNumero(resumen.lecturas)}</strong> de <strong>{fmtNumero(resumen.cuentas_activas)}</strong> cuentas leídas
+              </p>
+              <p className="flex items-baseline gap-4">
+                <span className="text-3xl font-bold text-marca-700">{porcentaje}%</span>
+                <span className="text-sm text-slate-600">
+                  Hoy: <strong>{fmtNumero(hoy)}</strong> {hoy === 1 ? 'lectura' : 'lecturas'}
+                </span>
+              </p>
+            </div>
             <div className="mt-2">
               <BarraProgreso valor={resumen.lecturas} total={resumen.cuentas_activas} />
             </div>
@@ -89,7 +154,8 @@ export default function PanelAdmin() {
             <Dato titulo="Conflictos" valor={resumen.conflictos_pendientes} a="/admin/lecturas?vista=conflictos" alerta={resumen.conflictos_pendientes > 0} />
           </div>
 
-          <AvanceOperadores periodoId={periodo.id} />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <CargaRapida periodoId={periodo.id} alGuardar={() => void panel.recargar()} />
 
           <Tarjeta>
             <div className="mb-3 flex items-center justify-between">
@@ -121,8 +187,13 @@ export default function PanelAdmin() {
               </ul>
             )}
           </Tarjeta>
+          </div>
+
+          <AvanceOperadores periodoId={periodo.id} />
         </>
       )}
+
+      <h2 className="pt-2 text-lg font-semibold">Ajustes</h2>
 
       {config && <Umbral config={config} alGuardar={() => void panel.recargar()} />}
       {config && <FotoObligatoria config={config} alGuardar={() => void panel.recargar()} />}

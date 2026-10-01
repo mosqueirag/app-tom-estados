@@ -11,7 +11,7 @@ export default defineConfig({
     VitePWA({
       // La app avisa cuando hay versión nueva (no se recarga sola en medio de una lectura).
       registerType: 'prompt',
-      includeAssets: ['icons/icono.svg', 'icons/apple-touch-icon.png', 'logo/coopsar.svg'],
+      includeAssets: ['icons/icono.svg', 'icons/apple-touch-icon.png'],
       manifest: {
         name: 'Lecturas de medidores',
         short_name: 'Lecturas',

@@ -56,6 +56,7 @@ async function mock(route) {
     if (b.avisar) return json(route, 200, { avisos_enviados: 0, mensaje: `Aviso ${b.avisar} de ${b.cuenta_ids.length}.` });
     if (b.rutas) b.ruta = b.rutas.join("','");
     const op = b.operador_id ? `'${b.operador_id}'` : 'null';
+    if (b.ruta) psql(`update rutas set operador_id=${op} where nombre in ('${b.ruta}')`);
     const donde = b.ruta !== undefined ? `ruta in ('${b.ruta}') and activa` : `id in (${b.cuenta_ids.map((i) => `'${i}'`).join(',')})`;
     const n = psql(`with u as (update cuentas set operador_id=${op} where ${donde} returning 1) select count(*) from u`);
     return json(route, 200, { actualizadas: Number(n), mensaje: `Se asignaron ${n} cuentas.` });
@@ -85,9 +86,10 @@ await page.getByRole('button', { name: 'Ingresar' }).click(); await page.waitFor
 await intentar('Rutas: lista y asignación de una ruta', async () => {
   await page.getByRole('navigation').getByRole('link', { name: 'Rutas' }).click();
   await main.getByRole('heading', { name: 'Rutas' }).waitFor();
-  await main.locator('tbody tr', { hasText: 'Ruta 1' }).waitFor();
-  ok('Rutas: una fila por ruta', (await main.locator('tbody tr').count()) === 2);
-  await main.getByLabel('Operador de Ruta 1').selectOption({ label: 'Juan Pérez' });
+  await main.getByLabel('Operador de Ruta 20', { exact: true }).waitFor();
+  ok('Rutas: una fila por ruta (las 20)', (await main.locator('tbody tr').count()) === 20);
+  await main.getByLabel('Operador de Ruta 1', { exact: true }).selectOption({ label: 'Juan Pérez' });
+  await page.getByRole('button', { name: 'Guardar cambios' }).click();
   await main.getByText('Se asignaron 5 cuentas.').waitFor();
   ok('Rutas: asignar Ruta 1 a Juan llama a la función con la ruta', llamadas.at(-1)?.ruta === 'Ruta 1' && llamadas.at(-1)?.operador_id === JUAN);
   ok('Rutas: la base quedó con 5 cuentas de Juan', psql(`select count(*) from cuentas where operador_id='${JUAN}'`) === '5');
@@ -149,7 +151,7 @@ async function entrarYDescargar(usuario) {
 }
 
 await intentar('Operadores: cada uno descarga lo suyo', async () => {
-  // Juan: Ruta 1 (5) + Ruta 2 sin asignar (4, la 10006 es de María) + 10020 sin asignar = 10
+  // Juan: Ruta 1 (4) + Ruta 2 sin asignar (5, con la 10002 que cambió de ruta; la 10006 es de María) + 10020 = 10
   ok('Juan descarga sus cuentas y las sin asignar (10)', (await entrarYDescargar('jperez')) === '10');
   ok('Aparece la tarjeta para activar avisos', await main.getByRole('button', { name: 'Activar avisos' }).isVisible());
   if (CAPT) await page.screenshot({ path: `${CAPT}/operador-avisos.png` });
@@ -159,16 +161,16 @@ await intentar('Operadores: cada uno descarga lo suyo', async () => {
   ok('Buscar: la ruta se ve y se puede buscar', (await main.locator('li').first().textContent()).includes('Ruta 3'));
   await page.getByRole('navigation').getByRole('link', { name: 'Inicio' }).click();
   await main.getByRole('button', { name: 'Cerrar sesión' }).dispatchEvent('click'); await page.waitForURL('**/login');
-  // María: 10006 + Ruta 2 sin asignar (4) + 10020 = 6
-  ok('María descarga las suyas (6)', (await entrarYDescargar('mgomez')) === '6');
+  // María: 10006 + Ruta 2 sin asignar (5: la 10002 pasó a Ruta 2 al importar y tomó el operador de esa ruta, ninguno) + 10020 = 7
+  ok('María descarga las suyas (7)', (await entrarYDescargar('mgomez')) === '7');
 });
 
 await intentar('Al tocar el aviso se descargan solas', async () => {
-  // A María le asignan la Ruta 1 (10001, 10003-10005; la 10002 pasó a Ruta 2 al importar y sigue siendo de Juan)
+  // A María le asignan la Ruta 1 (10001, 10003-10005): 7 + 4 = 11
   psql(`update cuentas set operador_id='${MARIA}' where ruta='Ruta 1'`);
   await page.goto(BASE + '/operador?descargar=1');
-  await main.getByText('Listo: 10 cuentas').waitFor();
-  ok('Abre con ?descargar=1 y descarga sola (María ahora tiene 10)', !page.url().includes('descargar'));
+  await main.getByText('Listo: 11 cuentas').waitFor();
+  ok('Abre con ?descargar=1 y descarga sola (María ahora tiene 11)', !page.url().includes('descargar'));
 });
 
 ok('Sin errores de JavaScript', errores.length === 0, errores.join(' | '));

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useSearchParams } from 'react-router';
 import { supabase } from '@/lib/supabase';
 import { llamarFuncion } from '@/lib/consultas';
 import { config } from '@/lib/config';
@@ -14,11 +15,13 @@ type Mensaje = { tono: 'exito' | 'error'; texto: string };
 export default function Operadores() {
   const auth = useAuth();
   const miId = auth.estado === 'con_sesion' ? auth.perfil.id : '';
-  const [creando, setCreando] = useState(false);
+  // Desde los accesos rápidos del Panel: ?accion=nuevo o ?accion=mensaje
+  const [parametros] = useSearchParams();
+  const [creando, setCreando] = useState(() => parametros.get('accion') === 'nuevo');
   const [reseteando, setReseteando] = useState<VOperador | null>(null);
   const [asignandoRutas, setAsignandoRutas] = useState<VOperador | null>(null);
   const [pasando, setPasando] = useState<VOperador | null>(null);
-  const [escribiendo, setEscribiendo] = useState(false);
+  const [escribiendo, setEscribiendo] = useState(() => parametros.get('accion') === 'mensaje');
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
   const [trabajando, setTrabajando] = useState<string | null>(null);
 
@@ -29,7 +32,7 @@ export default function Operadores() {
   }, []);
 
   const rutas = useConsulta(async () => {
-    const { data, error } = await supabase.from('v_rutas').select('*').neq('ruta', '').order('ruta');
+    const { data, error } = await supabase.from('v_rutas').select('*').neq('ruta', '').order('orden').order('ruta');
     if (error) throw error;
     return data;
   }, []);

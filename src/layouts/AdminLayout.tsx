@@ -24,8 +24,13 @@ export default function AdminLayout() {
       <aside className="border-b border-slate-200 bg-white md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-r md:border-b-0">
         <div className="flex items-center justify-between gap-2 p-4">
           <div className="min-w-0">
-            <img src="/logo/coopsar.svg" alt="COOPSAR" className="h-8 w-auto" />
-            <p className="mt-1 text-xs text-slate-500">Lecturas · Administración</p>
+            <div className="flex items-center gap-2">
+              <img src="/icons/icono.svg" alt="" className="size-9 shrink-0" />
+              <div className="min-w-0">
+                <p className="font-bold leading-tight text-marca-700">Lecturas</p>
+                <p className="text-xs text-slate-500">Administración</p>
+              </div>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <CampanaAvisos />

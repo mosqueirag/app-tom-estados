@@ -56,6 +56,7 @@ async function mock(route) {
     if (b.avisar) return json(route, 200, { avisos_enviados: 0, mensaje: `Aviso ${b.avisar} de ${b.cuenta_ids.length}.` });
     if (b.rutas) b.ruta = b.rutas.join("','");
     const op = b.operador_id ? `'${b.operador_id}'` : 'null';
+    if (b.ruta) psql(`update rutas set operador_id=${op} where nombre in ('${b.ruta}')`);
     const donde = b.ruta !== undefined ? `ruta in ('${b.ruta}') and activa` : `id in (${b.cuenta_ids.map((i) => `'${i}'`).join(',')})`;
     const n = psql(`with u as (update cuentas set operador_id=${op} where ${donde} returning 1) select count(*) from u`);
     return json(route, 200, { actualizadas: Number(n), mensaje: `Se asignaron ${n} cuentas.` });
@@ -69,7 +70,8 @@ const intentar = async (n, fn) => { try { await fn(); } catch (e) { ok(n, false,
 
 
 const JUAN = USERS['jperez@usuarios.lecturas.app'], MARIA = USERS['mgomez@usuarios.lecturas.app'];
-psql(`update cuentas set ruta='Ruta 1', operador_id='${JUAN}' where numero_cuenta between '10001' and '10005';
+psql(`update rutas set operador_id='${JUAN}' where nombre='Ruta 1';
+      update cuentas set ruta='Ruta 1', operador_id='${JUAN}' where numero_cuenta between '10001' and '10005';
       update cuentas set ruta='Ruta 2' where numero_cuenta between '10006' and '10008';
       update cuentas set ruta='Ruta 3' where numero_cuenta between '10009' and '10010';
       insert into periodos (nombre) select 'Octubre 2026' where not exists (select 1 from periodos where activo);`);
@@ -206,8 +208,8 @@ await intentar('Operador con varias rutas', async () => {
   await fila.getByRole('button', { name: 'Asignar rutas' }).click();
   const d = page.getByRole('dialog');
   await d.getByText('Rutas de María Gómez').waitFor();
-  await d.getByLabel(/Ruta 2/).check();
-  await d.getByLabel(/Ruta 3/).check();
+  await d.getByLabel(/^Ruta 2 \(/).check();
+  await d.getByLabel(/^Ruta 3 \(/).check();
   if (CAPT) await page.screenshot({ path: CAPT + '/rutas-operador.png' });
   llamadas.length = 0;
   await d.getByRole('button', { name: 'Guardar' }).click();
@@ -218,7 +220,7 @@ await intentar('Operador con varias rutas', async () => {
   ok('Varias rutas: la fila muestra Ruta 2 y Ruta 3', (await fila.textContent()).includes('Ruta 2'));
   ok('Varias rutas: la base quedó con 5 cuentas de María', psql(`select count(*) from cuentas where operador_id='${MARIA}'`) === '5');
   await fila.getByRole('button', { name: 'Cambiar' }).click();
-  await d.getByLabel(/Ruta 2/).uncheck();
+  await d.getByLabel(/^Ruta 2 \(/).uncheck();
   await d.getByRole('button', { name: 'Guardar' }).click();
   await main.getByText('Ruta 2 quedó sin asignar.').waitFor();
   ok('Varias rutas: quitar una la deja sin asignar', psql("select count(*) from cuentas where ruta='Ruta 2' and operador_id is null") === '3');

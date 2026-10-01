@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { supabase } from '@/lib/supabase';
 import { mensajeError, traerTodo } from '@/lib/consultas';
 import { fmtFecha, fmtNumero } from '@/lib/formato';
@@ -22,8 +23,10 @@ export default function Cuentas() {
   const [filtro, setFiltro] = useState<FiltroActiva>('activas');
   const [ruta, setRuta] = useState(TODAS_LAS_RUTAS);
   const [pagina, setPagina] = useState(0);
-  const [editando, setEditando] = useState<Cuenta | 'nueva' | null>(null);
-  const [importando, setImportando] = useState(false);
+  // Desde los accesos rápidos del Panel: ?accion=nueva o ?accion=importar
+  const [parametros] = useSearchParams();
+  const [editando, setEditando] = useState<Cuenta | 'nueva' | null>(() => (parametros.get('accion') === 'nueva' ? 'nueva' : null));
+  const [importando, setImportando] = useState(() => parametros.get('accion') === 'importar');
   const [historial, setHistorial] = useState<Cuenta | null>(null);
   const [mensaje, setMensaje] = useState<{ tono: 'exito' | 'error'; texto: string } | null>(null);
   const q = limpiarBusqueda(useDemorado(busqueda));
@@ -41,7 +44,7 @@ export default function Cuentas() {
   }, []);
 
   const rutas = useConsulta(async () => {
-    const { data, error } = await supabase.from('v_rutas').select('ruta, operador_id').order('ruta');
+    const { data, error } = await supabase.from('v_rutas').select('ruta, operador_id, orden').order('orden').order('ruta');
     if (error) throw error;
     return data;
   }, []);

@@ -79,7 +79,8 @@ const ok = (n, c, extra = '') => resultados.push(`${c ? '✓' : '✗'} ${n}${ext
 const intentar = async (n, fn) => { try { await fn(); } catch (e) { ok(n, false, e.message.split('\n')[0]); console.log('DBG', n, page.url(), (await page.locator('main').textContent({ timeout: 2000 }).catch(() => '')).slice(0, 400)); } };
 
 const JUAN = USERS['jperez@usuarios.lecturas.app'], MARIA = USERS['mgomez@usuarios.lecturas.app'];
-psql(`update cuentas set ruta='Ruta 1', operador_id='${JUAN}' where numero_cuenta between '10001' and '10005';
+psql(`update rutas set operador_id='${JUAN}' where nombre='Ruta 1';
+      update cuentas set ruta='Ruta 1', operador_id='${JUAN}' where numero_cuenta between '10001' and '10005';
       update cuentas set ruta='Ruta 2', operador_id='${MARIA}' where numero_cuenta between '10006' and '10008';
       insert into periodos (nombre) select 'Octubre 2026' where not exists (select 1 from periodos where activo);
       insert into periodos (nombre, fecha_inicio, fecha_cierre, activo) values ('Septiembre 2026', '2026-08-01', '2026-08-31', false);`);

@@ -175,6 +175,14 @@ export type VRuta = {
   operador_id: string | null;
   operador_nombre: string | null;
   repartida: boolean;
+  /** Número al final del nombre ("Ruta 7" → 7), para ordenar */
+  orden: number;
+};
+
+export type Ruta = {
+  nombre: string;
+  operador_id: string | null;
+  created_at: string;
 };
 
 export type SuscripcionPush = {
@@ -274,6 +282,7 @@ export type Database = {
       suscripciones_push: Tabla<SuscripcionPush, never, never>;
       mensajes: Tabla<Mensaje, Pick<Mensaje, 'texto'> & Partial<Mensaje>, never>;
       auditoria: Tabla<Auditoria, never, never>;
+      rutas: Tabla<Ruta, Pick<Ruta, 'nombre'> & Partial<Ruta>, Partial<Ruta>>;
     };
     Views: {
       v_lecturas: { Row: VLectura; Relationships: [] };

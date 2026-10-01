@@ -29,7 +29,10 @@ export default function OperadorLayout() {
     <ProveedorSync operadorId={operadorId}>
     <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-slate-50">
       <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
-        <img src="/logo/coopsar.svg" alt="COOPSAR" className="h-7 w-auto" />
+        <div className="flex items-center gap-2">
+          <img src="/icons/icono.svg" alt="" className="size-8" />
+          <p className="font-bold text-marca-700">Lecturas</p>
+        </div>
         <EstadoSync />
       </header>
 

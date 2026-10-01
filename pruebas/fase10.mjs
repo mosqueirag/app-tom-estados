@@ -56,6 +56,7 @@ async function mock(route) {
     if (b.avisar) return json(route, 200, { avisos_enviados: 0, mensaje: `Aviso ${b.avisar} de ${b.cuenta_ids.length}.` });
     if (b.rutas) b.ruta = b.rutas.join("','");
     const op = b.operador_id ? `'${b.operador_id}'` : 'null';
+    if (b.ruta) psql(`update rutas set operador_id=${op} where nombre in ('${b.ruta}')`);
     const donde = b.ruta !== undefined ? `ruta in ('${b.ruta}') and activa` : `id in (${b.cuenta_ids.map((i) => `'${i}'`).join(',')})`;
     const n = psql(`with u as (update cuentas set operador_id=${op} where ${donde} returning 1) select count(*) from u`);
     return json(route, 200, { actualizadas: Number(n), mensaje: `Se asignaron ${n} cuentas.` });
