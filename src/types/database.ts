@@ -177,12 +177,22 @@ export type VRuta = {
   repartida: boolean;
   /** Número al final del nombre ("Ruta 7" → 7), para ordenar */
   orden: number;
+  /** Tiene zona cargada desde un KML */
+  tiene_zona: boolean;
 };
+
+/** Polígonos de una zona: [polígono][anillo][punto] = [lng, lat]. El anillo 0 es el borde; los demás, agujeros. */
+export type Zona = [number, number][][][];
 
 export type Ruta = {
   nombre: string;
   operador_id: string | null;
   created_at: string;
+  zona: Zona | null;
+  zona_min_lat: number | null;
+  zona_max_lat: number | null;
+  zona_min_lng: number | null;
+  zona_max_lng: number | null;
 };
 
 export type SuscripcionPush = {
@@ -311,6 +321,11 @@ export type Database = {
       };
       ordenar_ruta: { Args: { p_ruta: string; p_cuenta_ids: string[] }; Returns: number };
       registrar_extras_lecturas: { Args: { p_extras: Json }; Returns: number };
+      asignar_rutas_por_zona: {
+        Args: { p_reemplazar?: boolean };
+        Returns: { asignadas: number; ids: string[]; sin_ubicacion: number; fuera_de_zona: number };
+      };
+      ruta_de_punto: { Args: { p_lat: number; p_lng: number }; Returns: string | null };
       resolver_conflicto: {
         Args: { p_conflicto_id: string; p_accion: 'descartar' | 'reemplazar' };
         Returns: undefined;

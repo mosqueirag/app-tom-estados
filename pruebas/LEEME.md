@@ -20,6 +20,7 @@ Son para quien mantenga el código (no hace falta correrlas para usar la app).
 | `fase12.mjs` | Avance por operador, mensajes a operadores (también sin señal), historial de cambios y comparación de períodos | 15 |
 | `fase13.mjs` | Modo oscuro y letra grande, aviso de batería baja, nota de voz (grabar, subir y escuchar) y resumen del día | 14 |
 | `fase14.mjs` | Logo original, accesos rápidos y carga rápida de lecturas en el Panel, 20 rutas con operador fijo | 31 |
+| `fase15.mjs` | Zonas de rutas desde KML/KMZ, ubicar cuentas por dirección y asignación automática por zona | 24 |
 
 ## Cómo se corren
 

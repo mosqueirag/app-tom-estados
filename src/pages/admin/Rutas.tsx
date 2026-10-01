@@ -6,6 +6,7 @@ import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Encabezado, Insignia, Tarjeta } from '@/components/ui';
 import type { VRuta } from '@/types/database';
 import { OrdenarRuta } from './rutas/OrdenarRuta';
+import { ZonasRutas } from './rutas/ZonasRutas';
 
 type Mensaje = { tono: 'exito' | 'error'; texto: string };
 
@@ -171,6 +172,8 @@ export default function Rutas() {
         </Tarjeta>
       )}
 
+      {rutas.datos && <ZonasRutas rutas={rutas.datos} alCambiar={() => void rutas.recargar()} />}
+
       <Tarjeta className="p-0">
         {rutas.cargando && !rutas.datos ? (
           <Cargando />
@@ -192,7 +195,7 @@ export default function Rutas() {
                   return (
                     <tr key={r.ruta} className={cambiada ? 'bg-marca-50' : ''}>
                       <td className="font-medium">
-                        {nombreRuta(r.ruta)} {r.repartida && !cambiada && <Insignia color="amarillo">Repartida</Insignia>}
+                        {nombreRuta(r.ruta)} {r.tiene_zona && <Insignia color="verde">Zona</Insignia>} {r.repartida && !cambiada && <Insignia color="amarillo">Repartida</Insignia>}
                       </td>
                       <td className="text-right tabular-nums">{fmtNumero(r.cuentas)}</td>
                       <td className="text-right tabular-nums">{fmtNumero(r.pendientes)}</td>

@@ -92,6 +92,7 @@ funciones. Están en la carpeta `supabase/migrations` y **hay que ejecutarlas en
    | 12 | `20260930000012_mensajes_auditoria_y_voz.sql` |
    | 13 | `20260930000013_permisos_mensajes_auditoria.sql` |
    | 14 | `20260930000014_rutas_con_operador.sql` |
+   | 15 | `20261001000015_zonas_de_rutas.sql` |
 
 6. **Datos de ejemplo (opcional):** si querés probar la app con 10 cuentas de prueba y un
    período "Octubre 2026", ejecutá también `supabase/seed.sql`. Para uso real no hace falta:
@@ -305,6 +306,19 @@ de nuevo para ver los cambios.
 **Siempre que el admin le manda datos a un operador le llega un aviso:** al asignarle una ruta
 o una cuenta, al crear una cuenta en su ruta (a mano o por Excel) y al modificar una de sus
 cuentas.
+
+### Zonas de las rutas (KML) y asignación automática
+
+1. Dibujá la zona de cada ruta como un **polígono** en Google My Maps o Google Earth y ponele de
+   nombre el número de la ruta (por ejemplo "Ruta 7" o "Zona 7"). Exportalo como **KML o KMZ**.
+2. En **Rutas → Importar KML** elegí el archivo. La app muestra las zonas en el mapa y sugiere la
+   ruta de cada una (si el nombre tiene un número, esa ruta). Revisá y tocá **Guardar zonas**.
+3. **Ubicar cuentas por dirección** busca en el mapa (OpenStreetMap) las cuentas que todavía no
+   tienen ubicación, usando su dirección y la localidad del Panel. Va de a una por segundo.
+4. **Asignar cuentas por zona** pasa cada cuenta sin ruta a la ruta de su zona, y con eso a su
+   operador (que recibe el aviso). **Reasignar todas por zona** también corrige las que tienen otra ruta.
+5. Desde entonces es automático: cuando una cuenta sin ruta recibe ubicación (por dirección o por
+   el GPS del operador al leerla), toma sola la ruta de su zona y su operador.
 
 ### Panel de inicio y carga rápida
 
