@@ -129,7 +129,7 @@ export function ProveedorAvisosLecturas({ children }: { children: ReactNode }) {
     setCartel(texto);
     if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification('Lecturas', { body: texto, icon: '/icons/icono-192.png', tag: 'lecturas-admin' });
+        new Notification('Lecturas', { body: texto, icon: '/icons/lecturas-192.png', tag: 'lecturas-admin' });
       } catch {
         /* algunos navegadores solo permiten notificar desde el service worker */
       }

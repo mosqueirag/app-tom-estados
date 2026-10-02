@@ -8,8 +8,8 @@ const svgMaskable = fs.readFileSync(`${DIR}/icono-maskable.svg`, 'utf8');
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 const p = await b.newPage();
 for (const [archivo, fuente, tam, fondo] of [
-  ['icono-192.png', svg, 192, false], ['icono-512.png', svg, 512, false],
-  ['icono-maskable-512.png', svgMaskable, 512, true], ['apple-touch-icon.png', svgMaskable, 180, true],
+  ['lecturas-192.png', svg, 192, false], ['lecturas-512.png', svg, 512, false],
+  ['lecturas-maskable-512.png', svgMaskable, 512, true], ['lecturas-apple-touch.png', svgMaskable, 180, true],
 ]) {
   await p.setViewportSize({ width: tam, height: tam });
   await p.setContent(`<html><body style="margin:0;background:transparent">${fuente.replace('<svg ', `<svg width="${tam}" height="${tam}" `)}</body></html>`);
