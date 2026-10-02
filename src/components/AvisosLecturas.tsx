@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { Insignia } from '@/components/ui';
 import type { VLectura } from '@/types/database';
+import { DetalleAviso } from '@/components/DetalleAviso';
+import { Bell, ChevronRight } from 'lucide-react';
 
 // Avisos del admin: cada lectura que sincroniza un operador llega al instante
 // (Supabase Realtime) y queda en la campana hasta que se marca como leída.
@@ -129,7 +131,7 @@ export function ProveedorAvisosLecturas({ children }: { children: ReactNode }) {
     setCartel(texto);
     if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification('Lecturas', { body: texto, icon: '/icons/lecturas-192.png', tag: 'lecturas-admin' });
+        new Notification('Lecturas', { body: texto, icon: '/icons/medidor-192.png', tag: 'lecturas-admin' });
       } catch {
         /* algunos navegadores solo permiten notificar desde el service worker */
       }
@@ -209,6 +211,7 @@ export function useAlCambiarLecturas(fn: () => void) {
 export function CampanaAvisos() {
   const { avisos, noLeidos, marcarLeidos, borrar } = useAvisos();
   const [abierto, setAbierto] = useState(false);
+  const [detalle, setDetalle] = useState<AvisoLectura | null>(null);
   const [permiso, setPermiso] = useState(() => ('Notification' in window ? Notification.permission : 'denied'));
   const caja = useRef<HTMLDivElement>(null);
 
@@ -230,13 +233,11 @@ export function CampanaAvisos() {
     <div className="relative" ref={caja}>
       <button
         onClick={alternar}
-        className="relative rounded-full p-2 text-slate-700 hover:bg-slate-100"
+        className="relative rounded-full p-2 text-marca-800 hover:bg-marca-100"
         aria-label={noLeidos ? `Avisos: ${noLeidos} sin leer` : 'Avisos'}
         aria-expanded={abierto}
       >
-        <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-        </svg>
+        <Bell className="size-6" strokeWidth={1.8} aria-hidden="true" />
         {noLeidos > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-5 rounded-full bg-red-600 px-1 text-center text-xs font-bold leading-5 text-white">
             {noLeidos > 99 ? '99+' : noLeidos}
@@ -266,28 +267,41 @@ export function CampanaAvisos() {
             ) : (
               <ul className="divide-y divide-slate-100">
                 {avisos.map((a) => (
-                  <li key={a.id} className={`px-4 py-3 text-sm ${a.leida ? '' : 'bg-marca-50'}`}>
-                    <div className="flex items-baseline justify-between gap-2">
+                  <li key={a.id}>
+                    <button
+                      type="button"
+                      className={`flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition hover:bg-marca-100/60 ${a.leida ? '' : 'bg-marca-50'}`}
+                      onClick={() => {
+                        setDetalle(a);
+                        alternar();
+                      }}
+                      aria-label={`Ver detalle de la cuenta ${a.numero_cuenta}`}
+                    >
+                      <span className="block min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
                       <span>
                         <strong>{a.numero_cuenta}</strong> · {a.titular}
                       </span>
                       <time className="shrink-0 text-xs text-slate-500" dateTime={a.fecha_lectura}>
                         {fmtFechaHora(a.fecha_lectura)}
                       </time>
-                    </div>
-                    <p className="mt-0.5 text-slate-600">
+                    </span>
+                    <span className="mt-0.5 block text-slate-600">
                       {a.operador_nombre ?? 'Operador'} ·{' '}
                       {a.sin_lectura ? `Sin lectura${a.observacion ? `: ${a.observacion}` : ''}` : `Lectura ${fmtNumero(a.lectura_actual)}`}
                       {a.consumo !== null && ` · Consumo ${fmtNumero(a.consumo)}`}
-                    </p>
+                    </span>
                     {(a.tipo === 'conflicto' || a.alerta_menor_anterior || a.alerta_consumo_anomalo || a.sin_lectura) && (
-                      <div className="mt-1 flex flex-wrap gap-1">
+                      <span className="mt-1 flex flex-wrap gap-1">
                         {a.tipo === 'conflicto' && <Insignia color="amarillo">Conflicto</Insignia>}
                         {a.alerta_menor_anterior && <Insignia color="rojo">Menor a la anterior</Insignia>}
                         {a.alerta_consumo_anomalo && <Insignia color="amarillo">Consumo anómalo</Insignia>}
                         {a.sin_lectura && a.tipo === 'lectura' && <Insignia>Sin lectura</Insignia>}
-                      </div>
+                      </span>
                     )}
+                  </span>
+                      <ChevronRight className="size-4 shrink-0 text-slate-400" aria-hidden="true" />
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -308,6 +322,7 @@ export function CampanaAvisos() {
           </div>
         </div>
       )}
+      <DetalleAviso aviso={detalle} alCerrar={() => setDetalle(null)} />
     </div>
   );
 }

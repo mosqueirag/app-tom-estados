@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Mic } from 'lucide-react';
 import { DURACION_MAXIMA, puedeGrabar, tipoDeGrabacion } from '@/lib/notasVoz';
 
 export type Nota = { blob: Blob; tipo: string };
@@ -92,7 +93,8 @@ export function GrabarNota({ nota, alCambiar }: { nota: Nota | null; alCambiar: 
         </div>
       ) : (
         <button type="button" className="boton-secundario mt-2 min-h-11 px-4" onClick={() => void empezar()}>
-          <span aria-hidden>🎙️</span>&nbsp;Grabar nota de voz
+          <Mic className="mr-2 size-5" aria-hidden="true" />
+          Grabar nota de voz
         </button>
       )}
       {error && <p className="mt-1 text-sm text-red-700">{error}</p>}

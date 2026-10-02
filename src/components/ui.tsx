@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 
 export function Modal({
   titulo,
@@ -14,6 +14,7 @@ export function Modal({
   ancho?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const idTitulo = useId();
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -25,12 +26,13 @@ export function Modal({
     <dialog
       ref={ref}
       onClose={alCerrar}
+      aria-labelledby={idTitulo}
       className={`m-auto w-[calc(100%-2rem)] ${ancho} rounded-2xl bg-white p-0 shadow-xl backdrop:bg-slate-900/40`}
     >
       {abierto && (
         <div className="flex max-h-[90vh] flex-col">
           <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-            <h2 className="text-lg font-semibold">{titulo}</h2>
+            <h2 id={idTitulo} className="text-lg font-semibold">{titulo}</h2>
             <button onClick={alCerrar} className="rounded-lg px-2 text-2xl leading-none text-slate-500 hover:bg-slate-100" aria-label="Cerrar">
               ×
             </button>
@@ -75,7 +77,7 @@ export function BarraProgreso({ valor, total }: { valor: number; total: number }
   const pct = total > 0 ? Math.min(100, Math.round((valor / total) * 100)) : 0;
   return (
     <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-      <div className="h-full rounded-full bg-marca-600 transition-all" style={{ width: `${pct}%` }} />
+      <div className="h-full rounded-full bg-linear-to-r from-marca-700 via-marca-500 to-marca-400 transition-all" style={{ width: `${pct}%` }} />
     </div>
   );
 }

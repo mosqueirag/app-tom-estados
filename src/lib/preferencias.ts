@@ -19,7 +19,7 @@ export function aplicarPreferencias(p: Preferencias = leerPreferencias()): void 
   const html = document.documentElement;
   html.classList.toggle('oscuro', p.oscuro);
   html.classList.toggle('letra-grande', p.letraGrande);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', p.oscuro ? '#0b1220' : '#0f766e');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', p.oscuro ? '#0b1220' : '#15803d');
 }
 
 export function usePreferencias(): [Preferencias, (cambio: Partial<Preferencias>) => void] {

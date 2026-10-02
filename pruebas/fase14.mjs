@@ -122,7 +122,7 @@ await intentar('Logo original', async () => {
   await page.getByLabel('Email o usuario').fill('admin@x.com'); await page.getByLabel('Contraseña').fill('secreto');
   await page.getByRole('button', { name: 'Ingresar' }).click(); await page.waitForURL(BASE + '/admin');
   ok('Admin: el encabezado usa el logo original', (await page.locator('aside img').first().getAttribute('src')) === '/icons/icono.svg');
-  ok('Ya no aparece el logo de COOPSAR', (await page.locator('img[src*="coopsar"]').count()) === 0);
+  ok('Admin: aparece el logo institucional de COOPSAR', (await page.locator('aside img[src="/logo/coopsar.svg"]').count()) === 1);
 });
 
 await intentar('Panel: accesos rápidos y aviso de rutas', async () => {

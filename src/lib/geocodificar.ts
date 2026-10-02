@@ -7,11 +7,21 @@ export const PAUSA_MS = 1100;
 
 export type Punto = { latitud: number; longitud: number };
 
-export async function buscarDireccion(direccion: string, localidad: string, senal?: AbortSignal): Promise<Punto | null> {
+/** Rectángulo donde buscar (el área de las zonas de las rutas). */
+export type Area = { minLat: number; maxLat: number; minLng: number; maxLng: number };
+
+export async function buscarDireccion(direccion: string, localidad: string, senal?: AbortSignal, area?: Area | null): Promise<Punto | null> {
   const texto = [direccion, localidad].map((t) => t.trim()).filter(Boolean).join(', ');
-  if (!texto) return null;
+  if (!direccion.trim()) return null;
   const url = new URL('https://nominatim.openstreetmap.org/search');
   url.searchParams.set('q', texto);
+  if (area) {
+    // Un poco de margen alrededor de las zonas y solo resultados adentro
+    const mLat = (area.maxLat - area.minLat) * 0.1 + 0.005;
+    const mLng = (area.maxLng - area.minLng) * 0.1 + 0.005;
+    url.searchParams.set('viewbox', [area.minLng - mLng, area.maxLat + mLat, area.maxLng + mLng, area.minLat - mLat].join(','));
+    url.searchParams.set('bounded', '1');
+  }
   url.searchParams.set('format', 'jsonv2');
   url.searchParams.set('limit', '1');
   url.searchParams.set('countrycodes', 'ar');

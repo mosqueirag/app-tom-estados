@@ -62,7 +62,9 @@ export default function Buscar() {
     );
   }
 
-  const totalLeidas = leidas?.size ?? 0;
+  // Solo cuentan las lecturas de cuentas que hoy están en el celular: si una cuenta
+  // pasó a otro operador, su lectura vieja no debe descontar de las pendientes.
+  const totalLeidas = (cuentas ?? []).filter((c) => leidas?.has(c.id)).length;
 
 
   return (

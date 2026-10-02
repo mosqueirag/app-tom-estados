@@ -5,13 +5,14 @@ import { EstadoSync } from '@/components/EstadoSync';
 import { ProveedorSync } from '@/sync/ProveedorSync';
 import { renovarPush } from '@/lib/push';
 import { AvisoBateria } from '@/components/AvisoBateria';
+import { CircleHelp, ClipboardList, Compass, House, Search, type LucideIcon } from 'lucide-react';
 
-const PESTANIAS = [
-  { a: '/operador', texto: 'Inicio', icono: '🏠', fin: true },
-  { a: '/operador/recorrido', texto: 'Recorrido', icono: '🧭' },
-  { a: '/operador/buscar', texto: 'Buscar', icono: '🔎' },
-  { a: '/operador/mis-lecturas', texto: 'Mis lecturas', icono: '📋' },
-  { a: '/operador/ayuda', texto: 'Ayuda', icono: '❔' },
+const PESTANIAS: { a: string; texto: string; Icono: LucideIcon; fin?: boolean }[] = [
+  { a: '/operador', texto: 'Inicio', Icono: House, fin: true },
+  { a: '/operador/recorrido', texto: 'Recorrido', Icono: Compass },
+  { a: '/operador/buscar', texto: 'Buscar', Icono: Search },
+  { a: '/operador/mis-lecturas', texto: 'Mis lecturas', Icono: ClipboardList },
+  { a: '/operador/ayuda', texto: 'Ayuda', Icono: CircleHelp },
 ];
 
 export default function OperadorLayout() {
@@ -27,11 +28,11 @@ export default function OperadorLayout() {
 
   return (
     <ProveedorSync operadorId={operadorId}>
-    <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-slate-50">
-      <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
+    <div className="mx-auto flex min-h-screen max-w-lg flex-col">
+      <header className="fondo-marca sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 shadow-md shadow-marca-900/20">
         <div className="flex items-center gap-2">
-          <img src="/icons/icono.svg" alt="" className="size-8" />
-          <p className="font-bold text-marca-700">Lecturas</p>
+          <img src="/icons/icono.svg" alt="" className="size-9 rounded-xl ring-2 ring-white/40" />
+          <p className="text-lg font-bold">Lecturas</p>
         </div>
         <EstadoSync />
       </header>
@@ -50,7 +51,7 @@ export default function OperadorLayout() {
 
       {/* Navegación inferior: botones grandes, al alcance del pulgar */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-10 mx-auto grid max-w-lg grid-cols-5 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]"
+        className="fixed inset-x-0 bottom-0 z-10 mx-auto grid max-w-lg grid-cols-5 border-t border-marca-100 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgb(20_83_45/0.08)] backdrop-blur"
         aria-label="Navegación"
       >
         {PESTANIAS.map((p) => (
@@ -59,15 +60,19 @@ export default function OperadorLayout() {
             to={p.a}
             end={p.fin}
             className={({ isActive }) =>
-              `flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs font-medium ${
+              `group flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs font-medium ${
                 isActive ? 'text-marca-700' : 'text-slate-500'
               }`
             }
           >
-            <span className="text-xl" aria-hidden>
-              {p.icono}
-            </span>
-            {p.texto}
+            {({ isActive }) => (
+              <>
+                <span className={`flex h-8 w-12 items-center justify-center rounded-full transition ${isActive ? 'fondo-marca shadow-sm' : ''}`} aria-hidden>
+                  <p.Icono className="size-5" strokeWidth={isActive ? 2.4 : 2} />
+                </span>
+                {p.texto}
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

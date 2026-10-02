@@ -21,6 +21,7 @@ Son para quien mantenga el código (no hace falta correrlas para usar la app).
 | `fase13.mjs` | Modo oscuro y letra grande, aviso de batería baja, nota de voz (grabar, subir y escuchar) y resumen del día | 14 |
 | `fase14.mjs` | Logo original, accesos rápidos y carga rápida de lecturas en el Panel, 20 rutas con operador fijo | 31 |
 | `fase15.mjs` | Zonas de rutas desde KML/KMZ, ubicar cuentas por dirección y asignación automática por zona | 24 |
+| `fase16.mjs` | Logo COOPSAR, filtros y orden en Lecturas, detalle de avisos, búsqueda sin localidad, contador de pendientes | 25 |
 
 ## Cómo se corren
 

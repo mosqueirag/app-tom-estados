@@ -314,11 +314,18 @@ cuentas.
 2. En **Rutas → Importar KML** elegí el archivo. La app muestra las zonas en el mapa y sugiere la
    ruta de cada una (si el nombre tiene un número, esa ruta). Revisá y tocá **Guardar zonas**.
 3. **Ubicar cuentas por dirección** busca en el mapa (OpenStreetMap) las cuentas que todavía no
-   tienen ubicación, usando su dirección y la localidad del Panel. Va de a una por segundo.
+   tienen ubicación, buscando su dirección dentro del área de las zonas importadas. Va de a una por segundo.
 4. **Asignar cuentas por zona** pasa cada cuenta sin ruta a la ruta de su zona, y con eso a su
    operador (que recibe el aviso). **Reasignar todas por zona** también corrige las que tienen otra ruta.
 5. Desde entonces es automático: cuando una cuenta sin ruta recibe ubicación (por dirección o por
    el GPS del operador al leerla), toma sola la ruta de su zona y su operador.
+
+### Lecturas: filtros y orden
+
+En **Lecturas** se filtra por texto, operador, ruta, estado, alertas, rango de fechas (desde/hasta)
+y consumo mínimo/máximo. Tocando el título de cada columna se ordena de menor a mayor (A → Z) y,
+tocándolo otra vez, de mayor a menor. **Exportar a Excel** respeta los filtros y el orden.
+En la campana de avisos, tocar una lectura abre su detalle (foto, mapa, nota de voz).
 
 ### Panel de inicio y carga rápida
 
@@ -358,8 +365,7 @@ Las fotos y las notas de voz no entran en ninguna de las dos copias: quedan en S
 En **Rutas → Ordenar recorrido** el admin pone las cuentas de cada ruta en el orden en que se
 caminan (con flechas, o **Ordenar por dirección** para empezar). En el celular, la pestaña
 **Recorrido** muestra la ruta en ese orden, cuál sigue y un botón **Cómo llegar** que abre Google
-Maps: usa la ubicación GPS de la última lectura, o la dirección más la **Localidad** que se
-carga en el Panel.
+Maps: usa la ubicación GPS de la última lectura, o la dirección.
 
 ### Foto del medidor y ubicación
 

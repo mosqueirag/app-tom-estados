@@ -93,9 +93,9 @@ await intentar('Manifest', async () => {
   const href = await page.locator('link[rel=manifest]').getAttribute('href');
   const m = await (await page.request.get(BASE + '/' + href.replace(/^\//, ''))).json();
   const iconos = await Promise.all(m.icons.map(async (i) => (await page.request.get(BASE + i.src)).status()));
-  ok('Manifest: nombre, standalone, color, íconos 192/512', m.name === 'Lecturas de medidores' && m.display === 'standalone' && m.theme_color === '#0f766e'
+  ok('Manifest: nombre, standalone, color, íconos 192/512', m.name === 'Lecturas de medidores' && m.display === 'standalone' && m.theme_color === '#15803d'
     && m.icons.some((i) => i.sizes === '192x192') && m.icons.some((i) => i.sizes === '512x512') && iconos.every((s) => s === 200), JSON.stringify(m.icons.map((i) => i.sizes + (i.purpose ? '/' + i.purpose : ''))));
-  ok('Ícono para iPhone', (await page.request.get(BASE + '/icons/lecturas-apple-touch.png')).status() === 200 && await page.locator('link[rel=apple-touch-icon]').count() === 1);
+  ok('Ícono para iPhone', (await page.request.get(BASE + '/icons/medidor-apple-touch.png')).status() === 200 && await page.locator('link[rel=apple-touch-icon]').count() === 1);
 });
 
 await intentar('Service worker', async () => {

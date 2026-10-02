@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSync } from '@/sync/contexto';
+import { BatteryLow } from 'lucide-react';
 import { useConexion } from '@/hooks/useConexion';
 
 type Bateria = EventTarget & { level: number; charging: boolean };
@@ -40,9 +41,7 @@ export function AvisoBateria() {
 
   return (
     <div role="alert" className="flex items-center gap-3 bg-red-50 px-4 py-2 text-sm text-red-900">
-      <span className="text-xl" aria-hidden>
-        🪫
-      </span>
+      <BatteryLow className="size-6 shrink-0" aria-hidden="true" />
       <p className="flex-1">
         <strong>Batería baja ({Math.round(bateria.nivel * 100)}%)</strong> y tenés {sync.pendientes} lectura{sync.pendientes === 1 ? '' : 's'} sin enviar.{' '}
         {enLinea ? 'Envialas ahora.' : 'Buscá señal para enviarlas o cargá el celular.'} Si se apaga no se pierden, pero no llegan hasta que la prendas.

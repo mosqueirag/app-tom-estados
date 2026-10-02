@@ -10,6 +10,7 @@ import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Insignia, Paginador, Tarjeta } from '@/components/ui';
 import type { VLectura } from '@/types/database';
 import { CorregirLectura } from './CorregirLectura';
+import { ArrowDown, ArrowUp, ArrowUpDown, Mic } from 'lucide-react';
 
 export type FiltrosLecturas = {
   periodoId: string;
@@ -17,13 +18,50 @@ export type FiltrosLecturas = {
   estado: 'todas' | 'con_lectura' | 'sin_lectura' | 'corregidas';
   alerta: 'todas' | 'cualquiera' | 'menor_anterior' | 'consumo_anomalo' | 'sin_lectura';
   q: string;
+  ruta?: string;
+  desde?: string; // AAAA-MM-DD, inclusive
+  hasta?: string; // AAAA-MM-DD, inclusive
+  consumoMin?: string;
+  consumoMax?: string;
+};
+
+export type ColumnaOrden = 'numero_cuenta' | 'titular' | 'ruta' | 'lectura_anterior' | 'lectura_actual' | 'consumo' | 'operador_nombre' | 'fecha_lectura';
+export type Orden = { columna: ColumnaOrden; asc: boolean };
+export const ORDEN_INICIAL: Orden = { columna: 'fecha_lectura', asc: false };
+export const COLUMNAS_ORDEN: Record<ColumnaOrden, string> = {
+  numero_cuenta: 'N° cuenta',
+  titular: 'Titular',
+  ruta: 'Ruta',
+  lectura_anterior: 'Anterior',
+  lectura_actual: 'Actual',
+  consumo: 'Consumo',
+  operador_nombre: 'Operador',
+  fecha_lectura: 'Fecha',
+};
+
+/** Comienzo del día (hora local) en ISO, para comparar con fecha_lectura. */
+function inicioDelDia(fecha: string, dias = 0): string {
+  const [a, m, d] = fecha.split('-').map(Number);
+  return new Date(a, m - 1, d + dias).toISOString();
+}
+
+const numeroDe = (t?: string) => {
+  const n = Number((t ?? '').replace(/\./g, '').replace(',', '.').trim());
+  return t?.trim() && Number.isFinite(n) ? n : null;
 };
 
 // Aplica los filtros a una consulta sobre v_lecturas (sirve para la tabla y para exportar).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function aplicarFiltros<Q extends { eq: any; not: any; or: any }>(consulta: Q, f: FiltrosLecturas): Q {
+export function aplicarFiltros<Q extends { eq: any; not: any; or: any; gte: any; lte: any; lt: any }>(consulta: Q, f: FiltrosLecturas): Q {
   let c = consulta.eq('periodo_id', f.periodoId);
   if (f.operadorId) c = c.eq('operador_id', f.operadorId);
+  if (f.ruta) c = c.eq('ruta', f.ruta === SIN_RUTA ? '' : f.ruta);
+  if (f.desde) c = c.gte('fecha_lectura', inicioDelDia(f.desde));
+  if (f.hasta) c = c.lt('fecha_lectura', inicioDelDia(f.hasta, 1));
+  const min = numeroDe(f.consumoMin);
+  const max = numeroDe(f.consumoMax);
+  if (min !== null) c = c.gte('consumo', min);
+  if (max !== null) c = c.lte('consumo', max);
   if (f.estado === 'con_lectura') c = c.eq('sin_lectura', false);
   if (f.estado === 'sin_lectura') c = c.eq('sin_lectura', true);
   if (f.estado === 'corregidas') c = c.not('corregida_at', 'is', null);
@@ -35,15 +73,54 @@ export function aplicarFiltros<Q extends { eq: any; not: any; or: any }>(consult
   return c;
 }
 
+export const SIN_RUTA = '(sin ruta)';
+
+/** Ordena la consulta; el desempate por N° de cuenta deja el orden estable entre páginas. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function aplicarOrden<Q extends { order: any }>(consulta: Q, o: Orden): Q {
+  let c = consulta.order(o.columna, { ascending: o.asc, nullsFirst: false });
+  if (o.columna !== 'numero_cuenta') c = c.order('numero_cuenta', { ascending: true });
+  return c;
+}
+
 const POR_PAGINA = 50;
 
-export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLecturas; periodoActivo: boolean }) {
+function Cabecera({ columna, orden, alOrdenar, derecha }: { columna: ColumnaOrden; orden: Orden; alOrdenar: (o: Orden) => void; derecha?: boolean }) {
+  const activa = orden.columna === columna;
+  const Flecha = activa ? (orden.asc ? ArrowUp : ArrowDown) : ArrowUpDown;
+  const texto = COLUMNAS_ORDEN[columna];
+  return (
+    <th className={derecha ? 'text-right' : ''} aria-sort={activa ? (orden.asc ? 'ascending' : 'descending') : 'none'}>
+      <button
+        type="button"
+        className={`inline-flex items-center gap-1 uppercase hover:text-marca-700 ${activa ? 'text-marca-700' : ''}`}
+        onClick={() => alOrdenar({ columna, asc: activa ? !orden.asc : columna !== 'fecha_lectura' })}
+        title={`Ordenar por ${texto.toLowerCase()}`}
+      >
+        {texto}
+        <Flecha className={`size-3.5 ${activa ? '' : 'opacity-40'}`} aria-hidden="true" />
+      </button>
+    </th>
+  );
+}
+
+export function TablaLecturas({
+  filtros,
+  periodoActivo,
+  orden = ORDEN_INICIAL,
+  alOrdenar = () => undefined,
+}: {
+  filtros: FiltrosLecturas;
+  periodoActivo: boolean;
+  orden?: Orden;
+  alOrdenar?: (o: Orden) => void;
+}) {
   const [pagina, setPagina] = useState(0);
   const [corrigiendo, setCorrigiendo] = useState<VLectura | null>(null);
   const [foto, setFoto] = useState<VLectura | null>(null);
   const [nota, setNota] = useState<VLectura | null>(null);
   const [historial, setHistorial] = useState<VLectura | null>(null);
-  const clave = JSON.stringify(filtros);
+  const clave = JSON.stringify([filtros, orden]);
   const [claveAnterior, setClaveAnterior] = useState(clave);
   if (clave !== claveAnterior) {
     setClaveAnterior(clave);
@@ -52,9 +129,7 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
 
   const lista = useConsulta(async () => {
     if (!filtros.periodoId) return { filas: [] as VLectura[], total: 0 };
-    const { data, error, count } = await aplicarFiltros(supabase.from('v_lecturas').select('*', { count: 'exact' }), filtros)
-      .order('fecha_lectura', { ascending: false })
-      .range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA - 1);
+    const { data, error, count } = await aplicarOrden(aplicarFiltros(supabase.from('v_lecturas').select('*', { count: 'exact' }), filtros), orden).range(pagina * POR_PAGINA, pagina * POR_PAGINA + POR_PAGINA - 1);
     if (error) throw error;
     return { filas: data, total: count ?? 0 };
   }, [clave, pagina]);
@@ -70,13 +145,14 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
           <table className="tabla">
             <thead>
               <tr>
-                <th>N° cuenta</th>
-                <th>Titular</th>
-                <th className="text-right">Anterior</th>
-                <th className="text-right">Actual</th>
-                <th className="text-right">Consumo</th>
-                <th>Operador</th>
-                <th>Fecha</th>
+                <Cabecera columna="numero_cuenta" orden={orden} alOrdenar={alOrdenar} />
+                <Cabecera columna="titular" orden={orden} alOrdenar={alOrdenar} />
+                <Cabecera columna="ruta" orden={orden} alOrdenar={alOrdenar} />
+                <Cabecera columna="lectura_anterior" orden={orden} alOrdenar={alOrdenar} derecha />
+                <Cabecera columna="lectura_actual" orden={orden} alOrdenar={alOrdenar} derecha />
+                <Cabecera columna="consumo" orden={orden} alOrdenar={alOrdenar} derecha />
+                <Cabecera columna="operador_nombre" orden={orden} alOrdenar={alOrdenar} />
+                <Cabecera columna="fecha_lectura" orden={orden} alOrdenar={alOrdenar} />
                 <th>Alertas</th>
                 <th>Foto y lugar</th>
                 <th></th>
@@ -90,6 +166,7 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
                     {l.titular}
                     {l.observacion && <div className="text-xs text-slate-500">“{l.observacion}”</div>}
                   </td>
+                  <td className="whitespace-nowrap">{l.ruta || '—'}</td>
                   <td className="text-right tabular-nums">{fmtNumero(l.lectura_anterior)}</td>
                   <td className="text-right tabular-nums font-medium">{l.sin_lectura ? '—' : fmtNumero(l.lectura_actual)}</td>
                   <td className="text-right tabular-nums">{fmtNumero(l.consumo)}</td>
@@ -126,7 +203,8 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
                     )}
                     {l.audio_path && (
                       <button className="boton-chico mr-1" onClick={() => setNota(l)} aria-label={`Escuchar nota de voz de ${l.numero_cuenta}`}>
-                        🎙️ Nota
+                        <Mic className="mr-1 size-4" aria-hidden="true" />
+                        Nota
                       </button>
                     )}
                     {!l.foto_path && !l.audio_path && l.latitud === null && <span className="text-xs text-slate-400">—</span>}
@@ -143,7 +221,7 @@ export function TablaLecturas({ filtros, periodoActivo }: { filtros: FiltrosLect
               ))}
               {lista.datos?.filas.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-slate-500">
+                  <td colSpan={11} className="py-8 text-center text-slate-500">
                     No hay lecturas con estos filtros.
                   </td>
                 </tr>

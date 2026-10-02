@@ -11,7 +11,7 @@ export default defineConfig({
     VitePWA({
       // La app avisa cuando hay versión nueva (no se recarga sola en medio de una lectura).
       registerType: 'prompt',
-      includeAssets: ['icons/icono.svg', 'icons/lecturas-apple-touch.png'],
+      includeAssets: ['icons/icono.svg', 'icons/medidor-apple-touch.png', 'logo/coopsar.svg'],
       manifest: {
         name: 'Lecturas de medidores',
         short_name: 'Lecturas',
@@ -21,12 +21,12 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        theme_color: '#0f766e',
+        theme_color: '#15803d',
         background_color: '#f8fafc',
         icons: [
-          { src: '/icons/lecturas-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/lecturas-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/lecturas-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icons/medidor-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/medidor-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/medidor-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

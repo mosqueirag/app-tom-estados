@@ -1,12 +1,16 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-marca-50: #f0fdfa;
-  --color-marca-100: #ccfbf1;
-  --color-marca-500: #14b8a6;
-  --color-marca-600: #0d9488;
-  --color-marca-700: #0f766e;
-  --color-marca-800: #115e59;
+  --color-marca-50: #f0fdf4;
+  --color-marca-100: #dcfce7;
+  --color-marca-200: #bbf7d0;
+  --color-marca-300: #86efac;
+  --color-marca-400: #4ade80;
+  --color-marca-500: #22c55e;
+  --color-marca-600: #16a34a;
+  --color-marca-700: #15803d;
+  --color-marca-800: #166534;
+  --color-marca-900: #14532d;
 }
 
 html,
@@ -17,11 +21,35 @@ body,
 
 body {
   padding-bottom: env(safe-area-inset-bottom);
+  background: linear-gradient(160deg, #f0fdf4 0%, #f8fafc 45%, #ecfdf5 100%) fixed;
+}
+
+/* Degradados verdes de la marca */
+.fondo-marca {
+  background-image: linear-gradient(135deg, #14532d 0%, #15803d 45%, #22c55e 100%);
+  color: #fff;
+}
+.fondo-marca-suave {
+  background-image: linear-gradient(135deg, #dcfce7 0%, #f0fdf4 55%, #ffffff 100%);
+}
+.texto-marca {
+  background-image: linear-gradient(90deg, #166534, #16a34a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.icono-marca {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background-image: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  color: #15803d;
 }
 
 @layer components {
   .boton-primario {
-    @apply inline-flex min-h-12 items-center justify-center rounded-xl bg-marca-600 px-5 text-base font-semibold text-white shadow-sm transition active:scale-[0.98] hover:bg-marca-700 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex min-h-12 items-center justify-center rounded-xl bg-linear-to-r from-marca-700 via-marca-600 to-marca-500 px-5 text-base font-semibold text-white shadow-sm shadow-marca-700/20 transition active:scale-[0.98] hover:from-marca-800 hover:via-marca-700 hover:to-marca-600 disabled:cursor-not-allowed disabled:opacity-60;
   }
   .boton-secundario {
     @apply inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 text-base font-semibold text-slate-800 transition active:scale-[0.98] hover:bg-slate-50 disabled:opacity-60;
@@ -33,7 +61,7 @@ body {
 
 @layer components {
   .acceso-rapido {
-    @apply flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white p-3 text-center text-sm font-medium text-slate-800 shadow-sm transition hover:border-marca-500 hover:shadow active:scale-[0.98];
+    @apply flex min-h-16 flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white p-3 text-center text-sm font-medium text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-marca-400 hover:shadow-md hover:shadow-marca-700/10 active:scale-[0.98];
   }
   .boton-chico {
     @apply inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50;
@@ -75,10 +103,11 @@ html.oscuro {
   --color-slate-700: #cbd5e1;
   --color-slate-800: #e2e8f0;
   --color-slate-900: #f1f5f9;
-  --color-marca-50: #042f2c;
-  --color-marca-100: #134e4a;
-  --color-marca-700: #5eead4;
-  --color-marca-800: #99f6e4;
+  --color-marca-50: #052e16;
+  --color-marca-100: #14532d;
+  --color-marca-200: #166534;
+  --color-marca-700: #86efac;
+  --color-marca-800: #bbf7d0;
   --color-emerald-50: #052e1f;
   --color-emerald-100: #064e3b;
   --color-emerald-200: #065f46;
@@ -120,8 +149,29 @@ html.oscuro .bg-white\/80 {
 html.oscuro .bg-white\/70 {
   background-color: rgb(30 41 59 / 0.7);
 }
-html.oscuro .boton-primario:hover {
-  background-color: #0f766e;
+html.oscuro body {
+  background: linear-gradient(160deg, #052e16 0%, #0b1220 45%, #0b1220 100%) fixed;
+}
+html.oscuro .boton-primario {
+  background-image: linear-gradient(90deg, #15803d, #16a34a, #22c55e);
+}
+html.oscuro .fondo-marca-suave {
+  background-image: linear-gradient(135deg, #052e16 0%, #0f2a1c 55%, #1e293b 100%);
+}
+html.oscuro .texto-marca {
+  background-image: linear-gradient(90deg, #86efac, #4ade80);
+}
+html.oscuro .icono-marca {
+  background-image: linear-gradient(135deg, #14532d, #166534);
+  color: #bbf7d0;
+}
+/* El logo de COOPSAR tiene letras oscuras: va sobre fondo claro */
+.logo-coopsar {
+  border-radius: 0.5rem;
+}
+html.oscuro .logo-coopsar {
+  background-color: #f8fafc;
+  padding: 0.25rem 0.5rem;
 }
 html.oscuro .boton-peligro {
   background-color: #dc2626;

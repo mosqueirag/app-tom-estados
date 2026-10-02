@@ -9,7 +9,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(datos.titulo || 'Lecturas de medidores', {
       body: datos.cuerpo || '',
-      icon: '/icons/lecturas-192.png',
+      icon: '/icons/medidor-192.png',
       tag: datos.tag || 'aviso',
       renotify: true,
       lang: 'es-AR',

@@ -10,6 +10,7 @@ import { ActivarAvisos } from '@/components/ActivarAvisos';
 import { MensajesOperador } from '@/components/MensajesOperador';
 import { ResumenDia } from '@/components/ResumenDia';
 import { PreferenciasPantalla } from '@/components/PreferenciasPantalla';
+import { Search } from 'lucide-react';
 
 export default function InicioOperador() {
   const auth = useAuth();
@@ -90,7 +91,7 @@ export default function InicioOperador() {
 
       <ActivarAvisos />
 
-      <section className="rounded-2xl bg-white p-4 shadow-sm">
+      <section className="fondo-marca-suave rounded-2xl border border-marca-100 p-4 shadow-sm">
         <p className="text-sm text-slate-500">Período</p>
         <p className="text-lg font-semibold">{periodo ? periodo.nombre : sync.descarga ? 'No hay período abierto' : 'Sin descargar'}</p>
         <p className="mt-1 text-sm text-slate-600">
@@ -138,6 +139,7 @@ export default function InicioOperador() {
       </Aviso>
 
       <Link to="/operador/buscar" className="boton-primario w-full">
+        <Search className="mr-2 size-5" aria-hidden="true" />
         Buscar cuenta para leer
       </Link>
       <PreferenciasPantalla />
@@ -145,6 +147,7 @@ export default function InicioOperador() {
       <button onClick={() => void salir()} className="boton-secundario w-full">
         Cerrar sesión
       </button>
+      <img src="/logo/coopsar.svg" alt="COOPSAR" className="logo-coopsar mx-auto mt-2 h-7 w-auto opacity-90" />
     </div>
   );
 }

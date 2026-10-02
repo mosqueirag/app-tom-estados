@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { llamarFuncion, mensajeError, traerTodo } from '@/lib/consultas';
 import { fmtNumero } from '@/lib/formato';
 import { leerArchivoZonas, rutaSugerida, type ZonaKml } from '@/lib/kml';
-import { buscarDireccion, esperar, PAUSA_MS } from '@/lib/geocodificar';
+import { buscarDireccion, esperar, PAUSA_MS, type Area } from '@/lib/geocodificar';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, BarraProgreso, Modal, Tarjeta } from '@/components/ui';
 import { colorDeRuta, MapaZonas, type PuntoEnMapa, type ZonaEnMapa } from '@/components/MapaZonas';
@@ -94,8 +94,22 @@ export function ZonasRutas({ rutas, alCambiar }: { rutas: VRuta[]; alCambiar: ()
     setMensaje(null);
     const { data: config } = await supabase.from('configuracion').select('localidad').eq('id', 1).maybeSingle();
     const localidad = config?.localidad?.trim() ?? '';
-    if (!localidad) {
-      setMensaje({ tono: 'error', texto: 'Primero cargá la localidad en el Panel (Ajustes → Localidad), así se buscan bien las calles.' });
+    // Se busca dentro del área de las zonas importadas (así no hace falta el nombre de la ciudad)
+    const { data: zonas } = await supabase
+      .from('rutas')
+      .select('zona_min_lat, zona_max_lat, zona_min_lng, zona_max_lng')
+      .not('zona', 'is', null);
+    const conArea = (zonas ?? []).filter((z) => z.zona_min_lat != null && z.zona_max_lat != null && z.zona_min_lng != null && z.zona_max_lng != null);
+    const area: Area | null = conArea.length
+      ? {
+          minLat: Math.min(...conArea.map((z) => z.zona_min_lat as number)),
+          maxLat: Math.max(...conArea.map((z) => z.zona_max_lat as number)),
+          minLng: Math.min(...conArea.map((z) => z.zona_min_lng as number)),
+          maxLng: Math.max(...conArea.map((z) => z.zona_max_lng as number)),
+        }
+      : null;
+    if (!area && !localidad) {
+      setMensaje({ tono: 'error', texto: 'Primero importá el KML de las zonas: las direcciones se buscan dentro de esa área.' });
       return;
     }
     let cuentas: { id: string; direccion: string }[];
@@ -118,7 +132,7 @@ export function ZonasRutas({ rutas, alCambiar }: { rutas: VRuta[]; alCambiar: ()
     setUbicando({ hechas, total: cuentas.length, encontradas });
     try {
       for (const c of cuentas) {
-        const punto = await buscarDireccion(c.direccion, localidad, control.signal);
+        const punto = await buscarDireccion(c.direccion, localidad, control.signal, area);
         if (punto) {
           // Al guardar la ubicación, si la cuenta no tiene ruta toma la de su zona
           const { error } = await supabase.from('cuentas').update(punto).eq('id', c.id);

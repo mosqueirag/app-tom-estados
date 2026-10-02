@@ -64,6 +64,7 @@ async function mock(route) {
   return json(route, 404, { message: 'sin mock ' + url.pathname });
 }
 const llamadas = [];
+process.on('unhandledRejection', () => undefined);
 const resultados = [];
 const ok = (n, c, extra = '') => resultados.push(`${c ? '✓' : '✗'} ${n}${extra ? ' — ' + extra : ''}`);
 const intentar = async (n, fn) => { try { await fn(); } catch (e) { ok(n, false, e.message.split('\n')[0]); console.log('DBG', page.url(), (await page.locator('main').textContent()).slice(0, 400)); } };
@@ -134,7 +135,7 @@ await intentar('Importar Excel con columna ruta', async () => {
   ok('Importar: guarda la ruta', psql("select string_agg(numero_cuenta||'='||ruta, ' ' order by numero_cuenta) from cuentas where numero_cuenta in ('10002','10020')") === '10002=Ruta 2 10020=Ruta 3');
   await page.keyboard.press('Escape');
 });
-await ctx.close();
+await ctx.unrouteAll({ behavior: 'ignoreErrors' }); await ctx.close();
 
 // ---------------------------------------------------------------- operadores
 ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'es-AR', hasTouch: true, isMobile: true });

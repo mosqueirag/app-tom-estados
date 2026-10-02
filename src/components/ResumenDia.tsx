@@ -5,7 +5,7 @@ import { fmtNumero } from '@/lib/formato';
 export type Resumen = { leidas: number; sinLectura: number; motivos: [string, number][]; pendientes: number; sinEnviar: number; total: number };
 
 /** Cuentas del día a partir de lo guardado en el celular (anda sin señal). */
-export function armarResumen(lecturasPeriodo: LecturaLocal[], totalCuentas: number, hoy = new Date()): Resumen {
+export function armarResumen(lecturasPeriodo: LecturaLocal[], totalCuentas: number, hoy = new Date(), cuentasDelCelular?: Set<string>): Resumen {
   const inicio = new Date(hoy);
   inicio.setHours(0, 0, 0, 0);
   const deHoy = lecturasPeriodo.filter((l) => new Date(l.fecha_lectura) >= inicio && l.estado !== 'rechazada');
@@ -14,7 +14,10 @@ export function armarResumen(lecturasPeriodo: LecturaLocal[], totalCuentas: numb
     const m = (l.observacion ?? '').trim() || 'Sin motivo';
     motivos.set(m, (motivos.get(m) ?? 0) + 1);
   }
-  const leidasPeriodo = new Set(lecturasPeriodo.filter((l) => l.estado !== 'rechazada').map((l) => l.cuenta_id)).size;
+  // Las lecturas de cuentas que ya no están en el celular (pasaron a otro operador) no descuentan pendientes
+  const leidasPeriodo = new Set(
+    lecturasPeriodo.filter((l) => l.estado !== 'rechazada' && (!cuentasDelCelular || cuentasDelCelular.has(l.cuenta_id))).map((l) => l.cuenta_id),
+  ).size;
   return {
     leidas: deHoy.filter((l) => !l.sin_lectura).length,
     sinLectura: deHoy.filter((l) => l.sin_lectura).length,
@@ -38,11 +41,11 @@ export function textoResumen(r: Resumen, nombre: string): string {
 
 export function ResumenDia({ operadorId, periodoId, nombre }: { operadorId: string; periodoId: string; nombre: string }) {
   const resumen = useLiveQuery(async () => {
-    const [lecturas, total] = await Promise.all([
+    const [lecturas, ids] = await Promise.all([
       db.lecturas.where('operador_id').equals(operadorId).filter((l) => l.periodo_id === periodoId).toArray(),
-      db.cuentas.count(),
+      db.cuentas.toCollection().primaryKeys(),
     ]);
-    return armarResumen(lecturas, total);
+    return armarResumen(lecturas, ids.length, new Date(), new Set(ids.map(String)));
   }, [operadorId, periodoId]);
 
   if (!resumen) return null;

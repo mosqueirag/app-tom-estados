@@ -40,9 +40,10 @@ export default function Login() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
-      <header className="space-y-2 text-center">
-        <img src="/icons/icono.svg" alt="" className="mx-auto size-16" />
-        <h1 className="text-2xl font-bold text-slate-900">Lecturas de medidores</h1>
+      <header className="fondo-marca-suave space-y-2 rounded-3xl border border-marca-100 p-6 text-center shadow-sm">
+        <img src="/icons/icono.svg" alt="" className="mx-auto size-16 drop-shadow-md" />
+        <h1 className="texto-marca text-2xl font-bold">Lecturas de medidores</h1>
+        <img src="/logo/coopsar.svg" alt="COOPSAR" className="logo-coopsar mx-auto h-8 w-auto" />
         <IndicadorConexion />
       </header>
 

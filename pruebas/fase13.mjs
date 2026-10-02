@@ -123,8 +123,8 @@ const TOTAL = Number((await main.getByText(/Listo: \d+ cuentas/).textContent()).
 
 await intentar('Modo oscuro y letra grande', async () => {
   await main.getByRole('switch', { name: 'Modo oscuro' }).check({ force: true });
-  const fondo = await page.evaluate(() => getComputedStyle(document.querySelector('main').parentElement).backgroundColor);
-  ok('Modo oscuro: cambia el fondo', (await page.evaluate(() => document.documentElement.classList.contains('oscuro'))) && fondo === 'rgb(11, 18, 32)', fondo);
+  const fondo = await page.evaluate(() => getComputedStyle(document.body).backgroundImage);
+  ok('Modo oscuro: cambia el fondo', (await page.evaluate(() => document.documentElement.classList.contains('oscuro'))) && fondo.includes('rgb(11, 18, 32)'), fondo);
   await main.getByRole('switch', { name: 'Letra grande' }).check({ force: true });
   ok('Letra grande: agranda la base de la letra', (await page.evaluate(() => getComputedStyle(document.documentElement).fontSize)) === '19px');
   if (CAPT) await page.screenshot({ path: CAPT + '/modo-oscuro.png', fullPage: true });
