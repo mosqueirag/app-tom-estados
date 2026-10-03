@@ -178,8 +178,10 @@ await intentar('Panel con datos', async () => {
   const t = await main.textContent();
   ok('Panel: progreso, alertas y conflictos', t.includes('Menor a la anterior') && t.includes('Consumo anómalo') && /Conflictos\s*1/.test(t));
   if (CAPT) await page.screenshot({ path: `${CAPT}/fase3-panel.png`, fullPage: true });
+  await page.getByRole('navigation').getByRole('link', { name: 'Configuración' }).click();
   await main.getByLabel('Umbral de consumo anómalo').fill('2,5'); await main.getByRole('heading', { name: 'Alerta de consumo anómalo' }).locator('..').getByRole('button', { name: 'Guardar' }).click();
   await main.getByText('Umbral guardado').waitFor();
+  await page.getByRole('navigation').getByRole('link', { name: 'Panel' }).click();
   ok('Panel: umbral configurable', psql('select umbral_consumo_anomalo from configuracion') === '2.50');
 });
 
@@ -227,19 +229,19 @@ await intentar('Lecturas', async () => {
 await intentar('Operadores', async () => {
   await page.getByRole('link', { name: 'Operadores' }).click();
   await main.getByText('Juan Pérez').waitFor();
-  const filaJuan = main.locator('tr', { hasText: 'Juan Pérez' });
-  ok('Operadores: cantidad de lecturas por operador', (await filaJuan.locator('td').nth(4).textContent()).trim() === '3', await filaJuan.locator('td').nth(4).textContent());
+  const filaJuan = main.getByRole('article', { name: 'Juan Pérez' });
+  ok('Operadores: cantidad de lecturas por operador', (await filaJuan.locator('dd').first().textContent()).trim() === '3', await filaJuan.locator('dd').first().textContent());
   await page.getByRole('button', { name: 'Nuevo operador' }).click();
   const d = page.locator('dialog[open]');
   await d.getByLabel('Nombre y apellido').fill('Carla Ruiz'); await d.getByRole('textbox', { name: 'Nombre de usuario' }).fill('cruiz');
   await d.getByLabel('Contraseña inicial').fill('clave123'); await d.getByRole('button', { name: 'Crear' }).click();
   await main.getByText('Carla Ruiz fue creado').waitFor();
   ok('Operadores: crear (con nombre de usuario)', psql("select nombre||'/'||rol||'/'||usuario from perfiles where email='cruiz@usuarios.lecturas.app'") === 'Carla Ruiz/operador/cruiz');
-  await main.locator('tr', { hasText: 'Carla Ruiz' }).getByRole('button', { name: 'Desactivar' }).click();
+  await main.getByRole('article', { name: 'Carla Ruiz' }).getByRole('button', { name: 'Desactivar' }).click();
   await main.getByText('Operador desactivado.').waitFor();
-  await main.locator('tr', { hasText: 'Carla Ruiz' }).getByText('Desactivado').waitFor();
+  await main.getByRole('article', { name: 'Carla Ruiz' }).getByText('Desactivado').waitFor();
   ok('Operadores: desactivar', psql("select activo from perfiles where email='cruiz@usuarios.lecturas.app'") === 'f');
-  await main.locator('tr', { hasText: 'Juan Pérez' }).getByRole('button', { name: 'Resetear contraseña' }).click();
+  await main.getByRole('article', { name: 'Juan Pérez' }).getByRole('button', { name: 'Resetear contraseña' }).click();
   await d.getByLabel('Nueva contraseña').fill('nueva123'); await d.getByRole('button', { name: 'Cambiar contraseña' }).click();
   await main.getByText('Se cambió la contraseña').waitFor(); ok('Operadores: resetear contraseña', true);
   if (CAPT) await page.screenshot({ path: `${CAPT}/fase3-operadores.png` });

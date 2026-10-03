@@ -4,12 +4,25 @@ import { fmtNumero } from '@/lib/formato';
 import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Paginador, Tarjeta } from '@/components/ui';
+import { BellRing } from 'lucide-react';
+import { AvisarPendientes } from './AvisarPendientes';
 
 const POR_PAGINA = 50;
 
 /** Cuentas activas que todavía no tienen lectura en el período. */
-export function TablaPendientes({ periodoId }: { periodoId: string }) {
+export function TablaPendientes({
+  periodoId,
+  periodoNombre = '',
+  periodoActivo = false,
+  avisarAlAbrir = false,
+}: {
+  periodoId: string;
+  periodoNombre?: string;
+  periodoActivo?: boolean;
+  avisarAlAbrir?: boolean;
+}) {
   const [pagina, setPagina] = useState(0);
+  const [avisando, setAvisando] = useState(avisarAlAbrir && periodoActivo);
   const lista = useConsulta(async () => {
     const { data, error, count } = await supabase
       .rpc('cuentas_pendientes', { p_periodo_id: periodoId }, { count: 'exact' })
@@ -26,7 +39,15 @@ export function TablaPendientes({ periodoId }: { periodoId: string }) {
         <Cargando />
       ) : (
         <div className="overflow-x-auto">
-          <p className="px-4 pt-4 text-sm text-slate-600">{fmtNumero(lista.datos?.total ?? 0)} cuentas sin leer en este período.</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-4">
+            <p className="text-sm text-slate-600">{fmtNumero(lista.datos?.total ?? 0)} cuentas sin leer en este período.</p>
+            {periodoActivo && (lista.datos?.total ?? 0) > 0 && (
+              <button className="boton-primario min-h-10 px-4 text-sm" onClick={() => setAvisando(true)}>
+                <BellRing className="mr-1.5 size-4" aria-hidden="true" />
+                Avisar a los operadores
+              </button>
+            )}
+          </div>
           <table className="tabla mt-2">
             <thead>
               <tr>
@@ -61,6 +82,7 @@ export function TablaPendientes({ periodoId }: { periodoId: string }) {
       <div className="px-4 pb-4">
         <Paginador pagina={pagina} porPagina={POR_PAGINA} total={lista.datos?.total ?? 0} alCambiar={setPagina} />
       </div>
+      <AvisarPendientes abierto={avisando} periodoId={periodoId} periodoNombre={periodoNombre} alCerrar={() => setAvisando(false)} />
     </Tarjeta>
   );
 }

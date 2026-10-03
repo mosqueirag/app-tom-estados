@@ -139,7 +139,7 @@ await intentar('Reporte PDF', async () => {
 });
 
 await intentar('Copia de seguridad', async () => {
-  await page.getByRole('navigation').getByRole('link', { name: 'Panel' }).click();
+  await page.getByRole('navigation').getByRole('link', { name: 'Configuración' }).click();
   const [descarga] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), main.getByRole('button', { name: 'Descargar copia de seguridad' }).dispatchEvent('click')]);
   const libro = XLSX.readFile(await descarga.path());
   ok('Copia: una hoja por tabla', ['cuentas', 'periodos', 'lecturas', 'lecturas_conflictos', 'lecturas_correcciones', 'perfiles', 'configuracion'].every((h) => libro.SheetNames.includes(h)), libro.SheetNames.join(','));

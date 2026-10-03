@@ -22,6 +22,7 @@ Son para quien mantenga el código (no hace falta correrlas para usar la app).
 | `fase14.mjs` | Logo original, accesos rápidos y carga rápida de lecturas en el Panel, 20 rutas con operador fijo | 31 |
 | `fase15.mjs` | Zonas de rutas desde KML/KMZ, ubicar cuentas por dirección y asignación automática por zona | 24 |
 | `fase16.mjs` | Logo COOPSAR, filtros y orden en Lecturas, detalle de avisos, búsqueda sin localidad, contador de pendientes | 25 |
+| `fase17.mjs` | Aviso de cuentas pendientes a cada operador y chat interno admin ↔ operador | 18 |
 
 ## Cómo se corren
 

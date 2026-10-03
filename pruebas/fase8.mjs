@@ -204,7 +204,7 @@ await intentar('Admin: foto y mapa', async () => {
   await main.getByRole('button', { name: 'Ver foto' }).waitFor();
   ok('Mapa: al tocar un punto muestra la lectura', (await main.textContent()).includes('Juan Pérez'));
   if (CAPT) await page.screenshot({ path: `${CAPT}/mapa.png` });
-  await page.getByRole('navigation').getByRole('link', { name: 'Panel' }).click();
+  await page.getByRole('navigation').getByRole('link', { name: 'Configuración' }).click();
   await main.getByText('Exigir foto en cada lectura').click();
   await main.getByText('Guardado. Los celulares lo toman').waitFor();
   ok('Panel: se puede exigir la foto', psql('select foto_obligatoria from configuracion') === 't');

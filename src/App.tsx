@@ -13,6 +13,7 @@ import Buscar from '@/pages/operador/Buscar';
 import Recorrido from '@/pages/operador/Recorrido';
 import CargarLectura from '@/pages/operador/CargarLectura';
 import MisLecturas from '@/pages/operador/MisLecturas';
+import ChatOperador from '@/pages/operador/Chat';
 
 // El módulo del administrador se carga aparte: el celular del operador no lo descarga al abrir.
 const AdminLayout = lazy(() => import('@/layouts/AdminLayout'));
@@ -24,6 +25,8 @@ const Periodos = lazy(() => import('@/pages/admin/Periodos'));
 const Rutas = lazy(() => import('@/pages/admin/Rutas'));
 const Mapa = lazy(() => import('@/pages/admin/Mapa'));
 const Historial = lazy(() => import('@/pages/admin/Historial'));
+const Mensajes = lazy(() => import('@/pages/admin/Mensajes'));
+const Configuracion = lazy(() => import('@/pages/admin/Configuracion'));
 
 export default function App() {
   if (!configuracionCompleta) return <PantallaConfigFaltante />;
@@ -48,6 +51,8 @@ export default function App() {
               <Route path="operadores" element={<Operadores />} />
               <Route path="periodos" element={<Periodos />} />
               <Route path="historial" element={<Historial />} />
+              <Route path="mensajes" element={<Mensajes />} />
+              <Route path="configuracion" element={<Configuracion />} />
             </Route>
           </Route>
 
@@ -59,6 +64,7 @@ export default function App() {
               <Route path="cuenta/:id" element={<CargarLectura />} />
               <Route path="mis-lecturas" element={<MisLecturas />} />
               <Route path="ayuda" element={<Instalar />} />
+              <Route path="chat" element={<ChatOperador />} />
             </Route>
           </Route>
 

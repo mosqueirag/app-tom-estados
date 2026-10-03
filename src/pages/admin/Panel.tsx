@@ -1,15 +1,12 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
 import { supabase } from '@/lib/supabase';
-import { mensajeError } from '@/lib/consultas';
 import { fmtFecha, fmtFechaHora, fmtNumero } from '@/lib/formato';
 import { useAlCambiarLecturas } from '@/components/AvisosLecturas';
-import { descargarCopiaDeSeguridad } from '@/lib/copiaSeguridad';
 import { AvanceOperadores } from '@/components/AvanceOperadores';
 import { CargaRapida } from '@/components/CargaRapida';
 import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, BarraProgreso, Cargando, Encabezado, Insignia, Tarjeta } from '@/components/ui';
-import { FileSpreadsheet, Keyboard, MessageSquare, Plus, Route, UserPlus, type LucideIcon } from 'lucide-react';
+import { BellRing, FileSpreadsheet, Keyboard, MessageSquare, Plus, Route, UserPlus, type LucideIcon } from 'lucide-react';
 import type { Configuracion, Periodo, ResumenPeriodo, VLectura } from '@/types/database';
 
 type DatosPanel = {
@@ -27,7 +24,8 @@ const ACCESOS: { a: string; texto: string; Icono: LucideIcon }[] = [
   { a: '/admin/cuentas?accion=importar', texto: 'Importar Excel', Icono: FileSpreadsheet },
   { a: '/admin/rutas', texto: 'Rutas y operadores', Icono: Route },
   { a: '/admin/operadores?accion=nuevo', texto: 'Nuevo operador', Icono: UserPlus },
-  { a: '/admin/operadores?accion=mensaje', texto: 'Mandar mensaje', Icono: MessageSquare },
+  { a: '/admin/mensajes', texto: 'Mensajes', Icono: MessageSquare },
+  { a: '/admin/lecturas?vista=pendientes&avisar=1', texto: 'Avisar pendientes', Icono: BellRing },
 ];
 
 export default function PanelAdmin() {
@@ -67,7 +65,7 @@ export default function PanelAdmin() {
 
   if (panel.cargando && !panel.datos) return <Cargando />;
   if (panel.error) return <Aviso tono="error">{panel.error}</Aviso>;
-  const { periodo, resumen, alertas, config, hoy, rutasSinOperador } = panel.datos!;
+  const { periodo, resumen, alertas, hoy, rutasSinOperador } = panel.datos!;
   const porcentaje = resumen && resumen.cuentas_activas ? Math.round((resumen.lecturas / resumen.cuentas_activas) * 100) : 0;
 
   return (
@@ -78,7 +76,7 @@ export default function PanelAdmin() {
         </button>
       </Encabezado>
 
-      <div role="group" aria-label="Accesos rápidos" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <div role="group" aria-label="Accesos rápidos" className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
         {ACCESOS.filter((x) => periodo || x.a !== '#carga-rapida').map((x) =>
           x.a.startsWith('#') ? (
             <a
@@ -194,11 +192,6 @@ export default function PanelAdmin() {
         </>
       )}
 
-      <h2 className="pt-2 text-lg font-semibold">Ajustes</h2>
-
-      {config && <Umbral config={config} alGuardar={() => void panel.recargar()} />}
-      {config && <FotoObligatoria config={config} alGuardar={() => void panel.recargar()} />}
-      <CopiaDeSeguridad />
     </div>
   );
 }
@@ -209,120 +202,5 @@ function Dato({ titulo, valor, a, alerta = false }: { titulo: string; valor: num
       <p className="text-sm text-slate-600">{titulo}</p>
       <p className="text-2xl font-bold">{fmtNumero(valor)}</p>
     </Link>
-  );
-}
-
-function Umbral({ config, alGuardar }: { config: Configuracion; alGuardar: () => void }) {
-  const [valor, setValor] = useState(String(config.umbral_consumo_anomalo));
-  const [estado, setEstado] = useState<{ tono: 'exito' | 'error'; texto: string } | null>(null);
-  const [guardando, setGuardando] = useState(false);
-
-  async function guardar() {
-    const n = Number(valor.replace(',', '.'));
-    if (!Number.isFinite(n) || n <= 0) {
-      setEstado({ tono: 'error', texto: 'Ingresá un número mayor a 0 (por ejemplo 3).' });
-      return;
-    }
-    setGuardando(true);
-    const { error } = await supabase.from('configuracion').update({ umbral_consumo_anomalo: n }).eq('id', 1);
-    setGuardando(false);
-    if (error) setEstado({ tono: 'error', texto: mensajeError(error) });
-    else {
-      setEstado({ tono: 'exito', texto: 'Umbral guardado. Los celulares lo toman al descargar las cuentas.' });
-      alGuardar();
-    }
-  }
-
-  return (
-    <Tarjeta>
-      <h2 className="font-semibold">Alerta de consumo anómalo</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Se avisa cuando el consumo supera este número de veces el último consumo de la cuenta.
-      </p>
-      <div className="mt-3 flex flex-wrap items-end gap-3">
-        <label>
-          <span className="etiqueta">Veces el último consumo</span>
-          <input className="campo w-32" inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} aria-label="Umbral de consumo anómalo" />
-        </label>
-        <button className="boton-primario" onClick={() => void guardar()} disabled={guardando}>
-          Guardar
-        </button>
-      </div>
-      {estado && (
-        <Aviso tono={estado.tono} className="mt-3">
-          {estado.texto}
-        </Aviso>
-      )}
-    </Tarjeta>
-  );
-}
-
-function FotoObligatoria({ config, alGuardar }: { config: Configuracion; alGuardar: () => void }) {
-  const [estado, setEstado] = useState<{ tono: 'exito' | 'error'; texto: string } | null>(null);
-  const [guardando, setGuardando] = useState(false);
-
-  async function cambiar(valor: boolean) {
-    setGuardando(true);
-    const { error } = await supabase.from('configuracion').update({ foto_obligatoria: valor }).eq('id', 1);
-    setGuardando(false);
-    if (error) setEstado({ tono: 'error', texto: mensajeError(error) });
-    else {
-      setEstado({ tono: 'exito', texto: 'Guardado. Los celulares lo toman al descargar las cuentas.' });
-      alGuardar();
-    }
-  }
-
-  return (
-    <Tarjeta>
-      <h2 className="font-semibold">Foto del medidor</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Cada lectura puede llevar una foto del medidor y la ubicación GPS. Las ves en Lecturas y en el Mapa.
-      </p>
-      <label className="mt-3 flex items-center gap-2">
-        <input type="checkbox" className="size-5" checked={config.foto_obligatoria} disabled={guardando} onChange={(e) => void cambiar(e.target.checked)} />
-        <span>Exigir foto en cada lectura</span>
-      </label>
-      {estado && (
-        <Aviso tono={estado.tono} className="mt-3">
-          {estado.texto}
-        </Aviso>
-      )}
-    </Tarjeta>
-  );
-}
-
-function CopiaDeSeguridad() {
-  const [estado, setEstado] = useState<{ tono: 'exito' | 'error'; texto: string } | null>(null);
-  const [descargando, setDescargando] = useState(false);
-
-  async function descargar() {
-    setDescargando(true);
-    setEstado(null);
-    try {
-      const n = await descargarCopiaDeSeguridad();
-      setEstado({ tono: 'exito', texto: `Copia descargada: ${fmtNumero(n.cuentas)} cuentas y ${fmtNumero(n.lecturas)} lecturas. Guardala en un lugar seguro.` });
-    } catch (e) {
-      setEstado({ tono: 'error', texto: `No se pudo armar la copia: ${mensajeError(e)}` });
-    } finally {
-      setDescargando(false);
-    }
-  }
-
-  return (
-    <Tarjeta>
-      <h2 className="font-semibold">Copia de seguridad</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Descarga un Excel con todas las cuentas, períodos, lecturas, conflictos, correcciones y operadores. Conviene bajarla al cerrar
-        cada período.
-      </p>
-      <button className="boton-secundario mt-3" onClick={() => void descargar()} disabled={descargando}>
-        {descargando ? 'Armando la copia…' : 'Descargar copia de seguridad'}
-      </button>
-      {estado && (
-        <Aviso tono={estado.tono} className="mt-3">
-          {estado.texto}
-        </Aviso>
-      )}
-    </Tarjeta>
   );
 }

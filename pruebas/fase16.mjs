@@ -244,7 +244,7 @@ await intentar('Celular: pendientes no descuenta cuentas de otro', async () => {
   const resumen = await page.goto(BASE + '/operador').then(() => main.getByRole('region', { name: 'Resumen del día' }).textContent());
   ok('Resumen: pendientes coincide', resumen.includes(`${lista}pendientes`), resumen);
   ok('Encabezado verde con ícono', (await page.locator('header.fondo-marca').count()) === 1 && (await page.getByRole('navigation').locator('svg').count()) === 5);
-  ok('Inicio: logo de COOPSAR', (await main.locator('img[src="/logo/coopsar.svg"]').count()) === 1);
+  ok('Celular: logo de COOPSAR arriba', (await page.locator('header img[src="/logo/coopsar.svg"]').count()) === 1);
   if (CAPT) await page.screenshot({ path: CAPT + '/operador-inicio.png', fullPage: true });
 });
 

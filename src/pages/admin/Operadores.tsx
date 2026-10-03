@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
+import { MessageSquare } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { llamarFuncion } from '@/lib/consultas';
 import { config } from '@/lib/config';
@@ -38,9 +39,10 @@ export default function Operadores() {
   }, []);
 
   const enviados = useConsulta(async () => {
-    const { data, error } = await supabase.from('mensajes').select('*').order('created_at', { ascending: false }).limit(10);
+    const { data, error } = await supabase.from('mensajes').select('*').order('created_at', { ascending: false }).limit(40);
     if (error) throw error;
-    return data;
+    // Solo los que mandó la administración (las respuestas de los operadores están en Mensajes)
+    return data.filter((m) => m.para_id === null || m.autor_id !== m.para_id).slice(0, 10);
   }, []);
   const operadoresActivos = lista.datos?.filter((o) => o.activo && o.rol === 'operador') ?? [];
 
@@ -76,76 +78,92 @@ export default function Operadores() {
       {mensaje && <Aviso tono={mensaje.tono} className="mb-4">{mensaje.texto}</Aviso>}
       {lista.error && <Aviso tono="error" className="mb-4">{lista.error}</Aviso>}
 
-      <Tarjeta className="p-0">
-        {lista.cargando && !lista.datos ? (
-          <Cargando />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="tabla">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Ingresa con</th>
-                  <th>Rol</th>
-                  <th>Rutas</th>
-                  <th className="text-right">Lecturas (período activo)</th>
-                  <th className="text-right">Lecturas (total)</th>
-                  <th>Última lectura</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {lista.datos?.map((o) => (
-                  <tr key={o.id} className={o.activo ? '' : 'text-slate-400'}>
-                    <td className="font-medium">
-                      {o.nombre} {!o.activo && <Insignia color="rojo">Desactivado</Insignia>}
+      {lista.cargando && !lista.datos ? (
+        <Cargando />
+      ) : (
+        <ul className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3" aria-label="Operadores">
+          {lista.datos?.map((o) => (
+            <li key={o.id}>
+              <article
+                aria-label={o.nombre}
+                className={`flex h-full flex-col rounded-2xl border bg-white p-4 shadow-sm ${o.activo ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-70'}`}
+              >
+                <header className="flex items-start gap-3">
+                  <span className="fondo-marca flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-bold" aria-hidden="true">
+                    {o.nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join('')}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="flex flex-wrap items-center gap-1 font-semibold">
+                      {o.nombre}
+                      {o.rol === 'admin' && <Insignia color="violeta">Admin</Insignia>}
+                      {!o.activo && <Insignia color="rojo">Desactivado</Insignia>}
                       {o.conflictos_pendientes > 0 && <Insignia color="amarillo">{o.conflictos_pendientes} conflicto(s)</Insignia>}
-                    </td>
-                    <td>{o.usuario ?? o.email}</td>
-                    <td>{o.rol === 'admin' ? <Insignia color="violeta">Admin</Insignia> : 'Operador'}</td>
-                    <td>
-                      {o.rol === 'operador' && (
-                        <div className="flex flex-wrap items-center gap-1">
-                          {rutasDe(o.id).map((r) => (
-                            <Insignia key={r}>{r}</Insignia>
-                          ))}
-                          {o.activo && (
-                            <button className="text-sm text-marca-700 hover:underline" onClick={() => setAsignandoRutas(o)}>
-                              {rutasDe(o.id).length ? 'Cambiar' : 'Asignar rutas'}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="text-right tabular-nums">{fmtNumero(o.lecturas_periodo_activo)}</td>
-                    <td className="text-right tabular-nums">{fmtNumero(o.lecturas_total)}</td>
-                    <td className="whitespace-nowrap">{fmtFechaHora(o.ultima_lectura_at)}</td>
-                    <td className="whitespace-nowrap text-right">
-                      {o.rol === 'operador' && (
-                        <button className="boton-chico mr-2" onClick={() => setPasando(o)} aria-label={`Pasar pendientes de ${o.nombre}`}>
-                          Pasar pendientes
-                        </button>
-                      )}
-                      <button className="boton-chico mr-2" onClick={() => setReseteando(o)}>
-                        Resetear contraseña
+                    </h2>
+                    <p className="truncate text-sm text-slate-500">Ingresa con {o.usuario ?? o.email}</p>
+                  </div>
+                </header>
+
+                <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-xl bg-slate-50 p-2">
+                    <dt className="text-[11px] text-slate-500">Período activo</dt>
+                    <dd className="text-lg font-bold tabular-nums">{fmtNumero(o.lecturas_periodo_activo)}</dd>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-2">
+                    <dt className="text-[11px] text-slate-500">Total</dt>
+                    <dd className="text-lg font-bold tabular-nums">{fmtNumero(o.lecturas_total)}</dd>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 p-2">
+                    <dt className="text-[11px] text-slate-500">Última lectura</dt>
+                    <dd className="text-xs font-medium leading-7">{o.ultima_lectura_at ? fmtFechaHora(o.ultima_lectura_at) : '—'}</dd>
+                  </div>
+                </dl>
+
+                {o.rol === 'operador' && (
+                  <div className="mt-3 flex flex-wrap items-center gap-1">
+                    <span className="mr-1 text-sm text-slate-500">Rutas:</span>
+                    {rutasDe(o.id).length ? rutasDe(o.id).map((r) => <Insignia key={r} color="verde">{r}</Insignia>) : <span className="text-sm text-slate-400">ninguna</span>}
+                    {o.activo && (
+                      <button className="ml-1 text-sm font-medium text-marca-700 hover:underline" onClick={() => setAsignandoRutas(o)}>
+                        {rutasDe(o.id).length ? 'Cambiar' : 'Asignar rutas'}
                       </button>
-                      {o.id !== miId && (
-                        <button className="boton-chico" disabled={trabajando === o.id} onClick={() => void cambiarActivo(o)}>
-                          {o.activo ? 'Desactivar' : 'Activar'}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Tarjeta>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-auto flex flex-wrap gap-2 border-t border-slate-100 pt-3 [&>*]:mt-0">
+                  {o.rol === 'operador' && o.activo && (
+                    <Link className="boton-chico gap-1" to={`/admin/mensajes?con=${o.id}`}>
+                      <MessageSquare className="size-4" aria-hidden="true" /> Chat
+                    </Link>
+                  )}
+                  {o.rol === 'operador' && (
+                    <button className="boton-chico" onClick={() => setPasando(o)} aria-label={`Pasar pendientes de ${o.nombre}`}>
+                      Pasar pendientes
+                    </button>
+                  )}
+                  <button className="boton-chico" onClick={() => setReseteando(o)}>
+                    Resetear contraseña
+                  </button>
+                  {o.id !== miId && (
+                    <button className="boton-chico" disabled={trabajando === o.id} onClick={() => void cambiarActivo(o)}>
+                      {o.activo ? 'Desactivar' : 'Activar'}
+                    </button>
+                  )}
+                </div>
+              </article>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {!!enviados.datos?.length && (
         <Tarjeta className="mt-6">
-          <h2 className="mb-2 font-semibold">Últimos mensajes enviados</h2>
+          <div className="mb-2 flex items-baseline justify-between gap-2">
+            <h2 className="font-semibold">Últimos mensajes enviados</h2>
+            <Link to="/admin/mensajes" className="text-sm font-medium text-marca-700 hover:underline">
+              Ver el chat
+            </Link>
+          </div>
           <ul className="divide-y divide-slate-100 text-sm">
             {enviados.datos.map((m) => (
               <li key={m.id} className="py-2">

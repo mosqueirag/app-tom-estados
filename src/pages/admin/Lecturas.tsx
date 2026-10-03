@@ -160,12 +160,12 @@ export default function Lecturas() {
 
       {vista === 'lecturas' && (
         <>
-          <section className="mb-4 rounded-2xl border border-marca-100 bg-white p-4 shadow-sm" aria-label="Filtros de lecturas">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <label className="sm:col-span-2">
-                <span className="etiqueta">Buscar</span>
+          <section className="mb-4 rounded-2xl border border-marca-100 bg-white p-3 shadow-sm" aria-label="Filtros de lecturas">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-2 md:grid-cols-4 2xl:grid-cols-8">
+              <label className="col-span-2">
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Buscar</span>
                 <input
-                  className="campo"
+                  className="campo-chico"
                   type="search"
                   placeholder="Buscar cuenta o titular"
                   value={busqueda}
@@ -173,8 +173,8 @@ export default function Lecturas() {
                 />
               </label>
               <label>
-                <span className="etiqueta">Operador</span>
-                <select className="campo" value={filtros.operadorId} onChange={(e) => cambiar('operador', e.target.value)} aria-label="Operador">
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Operador</span>
+                <select className="campo-chico" value={filtros.operadorId} onChange={(e) => cambiar('operador', e.target.value)} aria-label="Operador">
                   <option value="">Todos los operadores</option>
                   {operadores.datos?.map((o) => (
                     <option key={o.id} value={o.id}>
@@ -184,8 +184,8 @@ export default function Lecturas() {
                 </select>
               </label>
               <label>
-                <span className="etiqueta">Ruta</span>
-                <select className="campo" value={filtros.ruta} onChange={(e) => cambiar('ruta', e.target.value)} aria-label="Ruta">
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Ruta</span>
+                <select className="campo-chico" value={filtros.ruta} onChange={(e) => cambiar('ruta', e.target.value)} aria-label="Ruta">
                   <option value="">Todas las rutas</option>
                   {rutas.datos?.map((r) => (
                     <option key={r.ruta || SIN_RUTA} value={r.ruta || SIN_RUTA}>
@@ -195,8 +195,8 @@ export default function Lecturas() {
                 </select>
               </label>
               <label>
-                <span className="etiqueta">Estado</span>
-                <select className="campo" value={filtros.estado} onChange={(e) => cambiar('estado', e.target.value === 'todas' ? '' : e.target.value)} aria-label="Estado">
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Estado</span>
+                <select className="campo-chico" value={filtros.estado} onChange={(e) => cambiar('estado', e.target.value === 'todas' ? '' : e.target.value)} aria-label="Estado">
                   <option value="todas">Todos los estados</option>
                   <option value="con_lectura">Con lectura</option>
                   <option value="sin_lectura">Sin lectura</option>
@@ -204,8 +204,8 @@ export default function Lecturas() {
                 </select>
               </label>
               <label>
-                <span className="etiqueta">Alertas</span>
-                <select className="campo" value={filtros.alerta} onChange={(e) => cambiar('alerta', e.target.value === 'todas' ? '' : e.target.value)} aria-label="Alertas">
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Alertas</span>
+                <select className="campo-chico" value={filtros.alerta} onChange={(e) => cambiar('alerta', e.target.value === 'todas' ? '' : e.target.value)} aria-label="Alertas">
                   <option value="todas">Con y sin alertas</option>
                   <option value="cualquiera">Cualquier alerta</option>
                   <option value="menor_anterior">Menor a la anterior</option>
@@ -214,26 +214,26 @@ export default function Lecturas() {
                 </select>
               </label>
               <label>
-                <span className="etiqueta">Desde</span>
-                <input className="campo" type="date" value={filtros.desde} max={filtros.hasta || undefined} onChange={(e) => cambiar('desde', e.target.value)} aria-label="Fecha desde" />
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Desde</span>
+                <input className="campo-chico" type="date" value={filtros.desde} max={filtros.hasta || undefined} onChange={(e) => cambiar('desde', e.target.value)} aria-label="Fecha desde" />
               </label>
               <label>
-                <span className="etiqueta">Hasta</span>
-                <input className="campo" type="date" value={filtros.hasta} min={filtros.desde || undefined} onChange={(e) => cambiar('hasta', e.target.value)} aria-label="Fecha hasta" />
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Hasta</span>
+                <input className="campo-chico" type="date" value={filtros.hasta} min={filtros.desde || undefined} onChange={(e) => cambiar('hasta', e.target.value)} aria-label="Fecha hasta" />
               </label>
               <label>
-                <span className="etiqueta">Consumo mínimo</span>
-                <input className="campo" inputMode="numeric" value={filtros.consumoMin} onChange={(e) => cambiar('cmin', e.target.value)} placeholder="ej. 0" aria-label="Consumo mínimo" />
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Consumo mínimo</span>
+                <input className="campo-chico" inputMode="numeric" value={filtros.consumoMin} onChange={(e) => cambiar('cmin', e.target.value)} placeholder="ej. 0" aria-label="Consumo mínimo" />
               </label>
               <label>
-                <span className="etiqueta">Consumo máximo</span>
-                <input className="campo" inputMode="numeric" value={filtros.consumoMax} onChange={(e) => cambiar('cmax', e.target.value)} placeholder="ej. 500" aria-label="Consumo máximo" />
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Consumo máximo</span>
+                <input className="campo-chico" inputMode="numeric" value={filtros.consumoMax} onChange={(e) => cambiar('cmax', e.target.value)} placeholder="ej. 500" aria-label="Consumo máximo" />
               </label>
-              <div>
-                <span className="etiqueta">Ordenar por</span>
+              <div className="col-span-2 md:col-span-1 2xl:col-span-2">
+                <span className="mb-0.5 block text-xs font-medium text-slate-600">Ordenar por</span>
                 <div className="flex gap-2">
                   <select
-                    className="campo"
+                    className="campo-chico"
                     value={orden.columna}
                     onChange={(e) => ordenar({ columna: e.target.value as ColumnaOrden, asc: e.target.value !== 'fecha_lectura' })}
                     aria-label="Ordenar por"
@@ -246,7 +246,7 @@ export default function Lecturas() {
                   </select>
                   <button
                     type="button"
-                    className="boton-secundario shrink-0 px-3"
+                    className="boton-icono size-[38px] shrink-0"
                     onClick={() => ordenar({ ...orden, asc: !orden.asc })}
                     aria-label={orden.asc ? 'Orden ascendente (de menor a mayor, A a Z). Tocá para invertir' : 'Orden descendente (de mayor a menor, Z a A). Tocá para invertir'}
                     title={orden.asc ? 'De menor a mayor (A → Z)' : 'De mayor a menor (Z → A)'}
@@ -257,7 +257,7 @@ export default function Lecturas() {
               </div>
             </div>
             {hayFiltros && (
-              <button type="button" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-marca-700 hover:underline" onClick={limpiarFiltros}>
+              <button type="button" className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-marca-700 hover:underline" onClick={limpiarFiltros}>
                 <FilterX className="size-4" aria-hidden="true" />
                 Limpiar filtros
               </button>
@@ -266,7 +266,9 @@ export default function Lecturas() {
           <TablaLecturas filtros={filtros} periodoActivo={Boolean(periodo?.activo)} orden={orden} alOrdenar={ordenar} />
         </>
       )}
-      {vista === 'pendientes' && periodo && <TablaPendientes periodoId={periodo.id} />}
+      {vista === 'pendientes' && periodo && (
+        <TablaPendientes periodoId={periodo.id} periodoNombre={periodo.nombre} periodoActivo={periodo.activo} avisarAlAbrir={params.get('avisar') === '1'} />
+      )}
       {vista === 'conflictos' && periodo && <TablaConflictos periodoId={periodo.id} periodoActivo={periodo.activo} />}
     </div>
   );

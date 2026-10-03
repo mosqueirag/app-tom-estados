@@ -147,7 +147,6 @@ export default function InicioOperador() {
       <button onClick={() => void salir()} className="boton-secundario w-full">
         Cerrar sesión
       </button>
-      <img src="/logo/coopsar.svg" alt="COOPSAR" className="logo-coopsar mx-auto mt-2 h-7 w-auto opacity-90" />
     </div>
   );
 }

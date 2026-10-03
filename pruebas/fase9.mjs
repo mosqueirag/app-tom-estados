@@ -88,8 +88,8 @@ await page.getByLabel('Email o usuario').fill('admin@x.com'); await page.getByLa
 await page.getByRole('button', { name: 'Ingresar' }).click(); await page.waitForURL(BASE + '/admin');
 
 await intentar('Admin ordena la ruta', async () => {
-  await main.getByRole('heading', { name: 'Ajustes' }).waitFor();
-  ok('Panel: ya no tiene la sección de localidad', (await main.getByRole('heading', { name: 'Localidad' }).count()) === 0);
+  await main.getByRole('group', { name: 'Accesos rápidos' }).waitFor();
+  ok('Panel: ya no tiene la sección de localidad ni los ajustes', (await main.getByRole('heading', { name: 'Localidad' }).count()) === 0 && (await main.getByText('Alerta de consumo anómalo').count()) === 0);
   // Una sola ciudad: la localidad queda cargada en la base (la usa "Cómo llegar")
   psql("update configuracion set localidad = 'San Rafael, Mendoza'");
 

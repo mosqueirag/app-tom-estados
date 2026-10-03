@@ -5,6 +5,7 @@ import { db, type Meta } from '@/lib/db';
 import { fmtFechaHora } from '@/lib/formato';
 import { useConexion } from '@/hooks/useConexion';
 import { useAuth } from '@/auth/contexto';
+import { Link } from 'react-router';
 
 const DIAS = 14;
 const CLAVE_VISTO = 'mensajes-visto';
@@ -24,6 +25,7 @@ export async function actualizarMensajes(operadorId: string): Promise<void> {
     .from('mensajes')
     .select('id, texto, created_at, para_id')
     .gte('created_at', desde)
+    .or(`autor_id.is.null,autor_id.neq.${operadorId}`) // los que escribió él van solo al chat
     .order('created_at', { ascending: false })
     .limit(20);
   if (error) throw error;
@@ -101,11 +103,16 @@ export function MensajesOperador({ resaltar = false }: { resaltar?: boolean }) {
           </li>
         ))}
       </ul>
-      {nuevos.length > 0 && (
-        <button className="boton-primario mt-3 w-full" onClick={entendido}>
-          Entendido
-        </button>
-      )}
+      <div className="mt-3 flex gap-2">
+        {nuevos.length > 0 && (
+          <button className="boton-primario flex-1" onClick={entendido}>
+            Entendido
+          </button>
+        )}
+        <Link to="/operador/chat" className="boton-secundario flex-1">
+          Responder
+        </Link>
+      </div>
     </section>
   );
 }

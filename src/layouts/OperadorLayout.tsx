@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '@/auth/contexto';
 import { EstadoSync } from '@/components/EstadoSync';
 import { ProveedorSync } from '@/sync/ProveedorSync';
 import { renovarPush } from '@/lib/push';
 import { AvisoBateria } from '@/components/AvisoBateria';
-import { CircleHelp, ClipboardList, Compass, House, Search, type LucideIcon } from 'lucide-react';
+import { CircleHelp, ClipboardList, Compass, House, MessageCircle, Search, type LucideIcon } from 'lucide-react';
+import { sinLeerOperador, useMensajesEnVivo } from '@/lib/chat';
+import { useConsulta } from '@/hooks/useConsulta';
 
 const PESTANIAS: { a: string; texto: string; Icono: LucideIcon; fin?: boolean }[] = [
   { a: '/operador', texto: 'Inicio', Icono: House, fin: true },
@@ -20,6 +22,12 @@ export default function OperadorLayout() {
   const sinVerificar = auth.estado === 'con_sesion' && auth.sinVerificar;
   const operadorId = auth.estado === 'con_sesion' ? auth.perfil.id : '';
 
+  const conChat = Boolean(operadorId) && !sinVerificar;
+  const ubicacion = useLocation();
+  const sinLeer = useConsulta(async () => (conChat && navigator.onLine ? sinLeerOperador(operadorId) : 0), [conChat, operadorId, ubicacion.pathname]);
+  useMensajesEnVivo(() => void sinLeer.recargar(), conChat);
+  const noLeidos = sinLeer.datos ?? 0;
+
   // Si ya había activado los avisos, se vuelve a registrar el celular a su nombre.
   useEffect(() => {
     if (!operadorId || sinVerificar || !navigator.onLine) return;
@@ -30,11 +38,24 @@ export default function OperadorLayout() {
     <ProveedorSync operadorId={operadorId}>
     <div className="mx-auto flex min-h-screen max-w-lg flex-col">
       <header className="fondo-marca sticky top-0 z-10 flex items-center justify-between gap-2 px-4 py-3 shadow-md shadow-marca-900/20">
-        <div className="flex items-center gap-2">
-          <img src="/icons/icono.svg" alt="" className="size-9 rounded-xl ring-2 ring-white/40" />
-          <p className="text-lg font-bold">Lecturas</p>
+        <div className="rounded-xl bg-[#ffffff] px-2 py-1 shadow-sm">
+          <img src="/logo/coopsar.svg" alt="COOPSAR" className="h-6 w-auto" />
         </div>
-        <EstadoSync />
+        <div className="flex items-center gap-2">
+          <EstadoSync />
+          <Link
+            to="/operador/chat"
+            className="relative rounded-full bg-white/15 p-2 text-white ring-1 ring-white/30 hover:bg-white/25"
+            aria-label={noLeidos ? `Chat: ${noLeidos} sin leer` : 'Chat con la administración'}
+          >
+            <MessageCircle className="size-5" aria-hidden="true" />
+            {noLeidos > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-5 rounded-full bg-red-600 px-1 text-center text-xs font-bold leading-5 text-white">
+                {noLeidos > 9 ? '9+' : noLeidos}
+              </span>
+            )}
+          </Link>
+        </div>
       </header>
 
       <AvisoBateria />

@@ -66,6 +66,12 @@ body {
   .boton-chico {
     @apply inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:opacity-50;
   }
+  .boton-icono {
+    @apply inline-flex size-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:border-marca-400 hover:bg-marca-50 hover:text-marca-800 disabled:opacity-50;
+  }
+  .campo-chico {
+    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-marca-600 focus:ring-2 focus:ring-marca-100;
+  }
   .boton-peligro {
     @apply inline-flex min-h-12 items-center justify-center rounded-xl bg-red-600 px-5 text-base font-semibold text-white hover:bg-red-700 disabled:opacity-60;
   }
@@ -73,7 +79,7 @@ body {
     @apply w-full text-left text-sm;
   }
   .tabla th {
-    @apply whitespace-nowrap border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold tracking-wide text-slate-600 uppercase;
+    @apply whitespace-nowrap border-b border-slate-200 bg-marca-50 px-3 py-2 text-xs font-semibold tracking-wide text-slate-600 uppercase;
   }
   .tabla td {
     @apply border-b border-slate-100 px-3 py-2 align-top;

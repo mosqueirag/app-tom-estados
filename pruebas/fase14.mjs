@@ -118,17 +118,17 @@ page.on('dialog', (d) => d.accept());
 await intentar('Logo original', async () => {
   await page.goto(BASE + '/login');
   const src = await page.locator('header img').first().getAttribute('src');
-  ok('Login: muestra el logo original de la app', src === '/icons/icono.svg', src);
+  ok('Login: muestra el logo de COOPSAR arriba', src === '/logo/coopsar.svg', src);
   await page.getByLabel('Email o usuario').fill('admin@x.com'); await page.getByLabel('Contraseña').fill('secreto');
   await page.getByRole('button', { name: 'Ingresar' }).click(); await page.waitForURL(BASE + '/admin');
-  ok('Admin: el encabezado usa el logo original', (await page.locator('aside img').first().getAttribute('src')) === '/icons/icono.svg');
-  ok('Admin: aparece el logo institucional de COOPSAR', (await page.locator('aside img[src="/logo/coopsar.svg"]').count()) === 1);
+  ok('Admin: el logo de COOPSAR va arriba del menú', (await page.locator('aside img').first().getAttribute('src')) === '/logo/coopsar.svg');
+  ok('Admin: ya no está el ícono de Lecturas', (await page.locator('img[src="/icons/icono.svg"]').count()) === 0);
 });
 
 await intentar('Panel: accesos rápidos y aviso de rutas', async () => {
   const accesos = page.getByRole('group', { name: 'Accesos rápidos' });
   await accesos.waitFor();
-  ok('Panel: 6 accesos rápidos', (await accesos.getByRole('link').count()) === 6);
+  ok('Panel: 7 accesos rápidos', (await accesos.getByRole('link').count()) === 7);
   ok('Panel: avisa las rutas sin operador', await main.getByText('Hay 20 rutas sin operador').isVisible());
   if (CAPT) await page.screenshot({ path: CAPT + '/panel.png', fullPage: true });
 });
@@ -211,10 +211,10 @@ await intentar('Cuentas nuevas toman el operador de su ruta', async () => {
 
 await intentar('Operadores: rutas de cada uno', async () => {
   await page.goto(BASE + '/admin/operadores');
-  const fila = main.getByRole('row', { name: /Juan Pérez/ });
+  const fila = main.getByRole('article', { name: 'Juan Pérez' });
   await fila.getByText('Ruta 2').waitFor();
   ok('Operadores: Juan tiene Ruta 1 y Ruta 2', (await fila.textContent()).includes('Ruta 1'));
-  await main.getByRole('row', { name: /María Gómez/ }).getByRole('button', { name: 'Cambiar' }).click();
+  await main.getByRole('article', { name: 'María Gómez' }).getByRole('button', { name: 'Cambiar' }).click();
   const d = page.getByRole('dialog');
   ok('Operadores: el modal lista las 20 rutas', (await d.getByRole('checkbox').count()) >= 20);
   await d.getByRole('checkbox', { name: /Ruta 15/ }).check();

@@ -93,6 +93,7 @@ funciones. Están en la carpeta `supabase/migrations` y **hay que ejecutarlas en
    | 13 | `20260930000013_permisos_mensajes_auditoria.sql` |
    | 14 | `20260930000014_rutas_con_operador.sql` |
    | 15 | `20261001000015_zonas_de_rutas.sql` |
+   | 16 | `20261002000016_chat_interno.sql` |
 
 6. **Datos de ejemplo (opcional):** si querés probar la app con 10 cuentas de prueba y un
    período "Octubre 2026", ejecutá también `supabase/seed.sql`. Para uso real no hace falta:
@@ -319,6 +320,18 @@ cuentas.
    operador (que recibe el aviso). **Reasignar todas por zona** también corrige las que tienen otra ruta.
 5. Desde entonces es automático: cuando una cuenta sin ruta recibe ubicación (por dirección o por
    el GPS del operador al leerla), toma sola la ruta de su zona y su operador.
+
+### Chat interno y aviso de pendientes
+
+- **Mensajes** (admin): una conversación con cada operador y una para avisos a todos. Lo que
+  escribe el admin le llega al operador como notificación. Los no leídos se marcan en el menú.
+- En el celular, el botón de chat (arriba a la derecha) abre la conversación con la administración.
+- **Lecturas → Pendientes → Avisar a los operadores** (o el acceso **Avisar pendientes** del Panel)
+  manda a cada operador cuántas cuentas le faltan y cuáles.
+- Migración `20261002000016_chat_interno.sql`: `mensajes.leido_at`, permiso para que el operador
+  escriba en su propia conversación, `marcar_mensajes_leidos()` y la vista `v_conversaciones`.
+
+Los ajustes (alerta de consumo, foto obligatoria y copia de seguridad) están en **Configuración**.
 
 ### Lecturas: filtros y orden
 

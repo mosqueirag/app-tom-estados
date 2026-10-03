@@ -153,6 +153,17 @@ export type Mensaje = {
   para_id: string | null;
   texto: string;
   created_at: string;
+  leido_at: string | null;
+};
+
+export type VConversacion = {
+  operador_id: string;
+  nombre: string;
+  activo: boolean;
+  ultimo_texto: string | null;
+  ultimo_at: string | null;
+  ultimo_del_operador: boolean;
+  sin_leer: number;
 };
 
 export type Auditoria = {
@@ -299,6 +310,7 @@ export type Database = {
       v_operadores: { Row: VOperador; Relationships: [] };
       v_conflictos: { Row: VConflicto; Relationships: [] };
       v_rutas: { Row: VRuta; Relationships: [] };
+      v_conversaciones: { Row: VConversacion; Relationships: [] };
     };
     Functions: {
       es_admin: { Args: never; Returns: boolean };
@@ -326,6 +338,7 @@ export type Database = {
         Returns: { asignadas: number; ids: string[]; sin_ubicacion: number; fuera_de_zona: number };
       };
       ruta_de_punto: { Args: { p_lat: number; p_lng: number }; Returns: string | null };
+      marcar_mensajes_leidos: { Args: { p_operador?: string }; Returns: number };
       resolver_conflicto: {
         Args: { p_conflicto_id: string; p_accion: 'descartar' | 'reemplazar' };
         Returns: undefined;

@@ -10,7 +10,7 @@ import { useConsulta } from '@/hooks/useConsulta';
 import { Aviso, Cargando, Insignia, Paginador, Tarjeta } from '@/components/ui';
 import type { VLectura } from '@/types/database';
 import { CorregirLectura } from './CorregirLectura';
-import { ArrowDown, ArrowUp, ArrowUpDown, Mic } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Camera, Eye, History, MapPin, Mic, Pencil } from 'lucide-react';
 
 export type FiltrosLecturas = {
   periodoId: string;
@@ -153,27 +153,17 @@ export function TablaLecturas({
                 <Cabecera columna="consumo" orden={orden} alOrdenar={alOrdenar} derecha />
                 <Cabecera columna="operador_nombre" orden={orden} alOrdenar={alOrdenar} />
                 <Cabecera columna="fecha_lectura" orden={orden} alOrdenar={alOrdenar} />
-                <th>Alertas</th>
-                <th>Foto y lugar</th>
-                <th></th>
+                <th className="text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {lista.datos?.filas.map((l) => (
                 <tr key={l.id}>
                   <td className="font-medium">{l.numero_cuenta}</td>
-                  <td>
+                  <td className="min-w-40">
                     {l.titular}
                     {l.observacion && <div className="text-xs text-slate-500">“{l.observacion}”</div>}
-                  </td>
-                  <td className="whitespace-nowrap">{l.ruta || '—'}</td>
-                  <td className="text-right tabular-nums">{fmtNumero(l.lectura_anterior)}</td>
-                  <td className="text-right tabular-nums font-medium">{l.sin_lectura ? '—' : fmtNumero(l.lectura_actual)}</td>
-                  <td className="text-right tabular-nums">{fmtNumero(l.consumo)}</td>
-                  <td>{l.operador_nombre}</td>
-                  <td className="whitespace-nowrap">{fmtFechaHora(l.fecha_lectura)}</td>
-                  <td>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="mt-1 flex flex-wrap gap-1 empty:hidden">
                       {l.alerta_menor_anterior && <Insignia color="rojo">Menor a la anterior</Insignia>}
                       {l.alerta_consumo_anomalo && <Insignia color="amarillo">Consumo anómalo</Insignia>}
                       {l.alerta_sin_lectura && <Insignia>Sin lectura</Insignia>}
@@ -184,44 +174,55 @@ export function TablaLecturas({
                       )}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap">
-                    {l.foto_path && (
-                      <button className="boton-chico mr-1" onClick={() => setFoto(l)}>
-                        Foto
-                      </button>
-                    )}
-                    {l.latitud !== null && l.longitud !== null && (
-                      <a
-                        className="boton-chico"
-                        href={linkMapa(l)}
-                        target="_blank"
-                        rel="noreferrer"
-                        title={l.precision_gps ? `Precisión ±${Math.round(l.precision_gps)} m` : undefined}
-                      >
-                        Mapa
-                      </a>
-                    )}
-                    {l.audio_path && (
-                      <button className="boton-chico mr-1" onClick={() => setNota(l)} aria-label={`Escuchar nota de voz de ${l.numero_cuenta}`}>
-                        <Mic className="mr-1 size-4" aria-hidden="true" />
-                        Nota
-                      </button>
-                    )}
-                    {!l.foto_path && !l.audio_path && l.latitud === null && <span className="text-xs text-slate-400">—</span>}
-                  </td>
+                  <td className="whitespace-nowrap">{l.ruta || '—'}</td>
+                  <td className="text-right tabular-nums">{fmtNumero(l.lectura_anterior)}</td>
+                  <td className="text-right tabular-nums font-medium">{l.sin_lectura ? '—' : fmtNumero(l.lectura_actual)}</td>
+                  <td className="text-right tabular-nums">{fmtNumero(l.consumo)}</td>
+                  <td>{l.operador_nombre}</td>
+                  <td className="whitespace-nowrap">{fmtFechaHora(l.fecha_lectura)}</td>
+
                   <td className="whitespace-nowrap text-right">
-                    <button className="boton-chico mr-1" onClick={() => setHistorial(l)}>
-                      Historial
-                    </button>
-                    <button className="boton-chico" onClick={() => setCorrigiendo(l)}>
-                      {periodoActivo ? 'Corregir' : 'Ver'}
-                    </button>
+                    <div className="inline-flex gap-1">
+                      {l.foto_path && (
+                        <button className="boton-icono" onClick={() => setFoto(l)} aria-label="Foto" title="Ver la foto del medidor">
+                          <Camera className="size-4" aria-hidden="true" />
+                        </button>
+                      )}
+                      {l.latitud !== null && l.longitud !== null && (
+                        <a
+                          className="boton-icono"
+                          href={linkMapa(l)}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label="Mapa"
+                          title={l.precision_gps ? `Ver en el mapa (precisión ±${Math.round(l.precision_gps)} m)` : 'Ver en el mapa'}
+                        >
+                          <MapPin className="size-4" aria-hidden="true" />
+                        </a>
+                      )}
+                      {l.audio_path && (
+                        <button className="boton-icono" onClick={() => setNota(l)} aria-label={`Escuchar nota de voz de ${l.numero_cuenta}`} title="Escuchar la nota de voz">
+                          <Mic className="size-4" aria-hidden="true" />
+                        </button>
+                      )}
+                      <button className="boton-icono" onClick={() => setHistorial(l)} aria-label="Historial" title="Historial de consumo de la cuenta">
+                        <History className="size-4" aria-hidden="true" />
+                      </button>
+                      <button
+                        className="boton-icono text-marca-700"
+                        onClick={() => setCorrigiendo(l)}
+                        aria-label={periodoActivo ? 'Corregir' : 'Ver'}
+                        title={periodoActivo ? 'Corregir la lectura' : 'Ver la lectura'}
+                      >
+                        {periodoActivo ? <Pencil className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {lista.datos?.filas.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="py-8 text-center text-slate-500">
+                  <td colSpan={9} className="py-8 text-center text-slate-500">
                     No hay lecturas con estos filtros.
                   </td>
                 </tr>

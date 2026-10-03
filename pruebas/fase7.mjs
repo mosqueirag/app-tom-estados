@@ -86,11 +86,14 @@ async function simularRealtime(ctx) {
       if (event === 'phoenix' || topic === 'phoenix') return ws.send(JSON.stringify([null, ref, 'phoenix', 'phx_reply', { status: 'ok', response: {} }]));
       if (event === 'phx_join') {
         const filtros = (payload.config?.postgres_changes ?? []).map((f, i) => ({ ...f, id: 100 + i }));
-        unidos.push({ topic, filtros });
+        unidos.push({ topic, filtros, ws });
         ws.send(JSON.stringify([joinRef, ref, topic, 'phx_reply', { status: 'ok', response: { postgres_changes: filtros } }]));
+        // Hay varios canales (lecturas, mensajes...): el cambio va a los que escuchan esa tabla
         enviarCambio = (table, type, record) => {
-          const ids = filtros.filter((f) => f.table === table && (f.event === type || f.event === '*')).map((f) => f.id);
-          ws.send(JSON.stringify([null, null, topic, 'postgres_changes', { ids, data: { schema: 'public', table, type, record, commit_timestamp: new Date().toISOString(), columns: [], errors: null } }]));
+          for (const u of unidos) {
+            const ids = u.filtros.filter((f) => f.table === table && (f.event === type || f.event === '*')).map((f) => f.id);
+            if (ids.length) u.ws.send(JSON.stringify([null, null, u.topic, 'postgres_changes', { ids, data: { schema: 'public', table, type, record, commit_timestamp: new Date().toISOString(), columns: [], errors: null } }]));
+          }
         };
         return;
       }
@@ -123,7 +126,7 @@ function nuevaLectura(numero, valor, fecha, operador = JUAN) {
 
 await intentar('En vivo: se suscribe a lecturas y conflictos', async () => {
   for (let i = 0; i < 30 && !enviarCambio; i++) await page.waitForTimeout(200);
-  const f = unidos.at(-1)?.filtros ?? [];
+  const f = unidos.flatMap((u) => u.filtros);
   ok('En vivo: se suscribe a lecturas y conflictos', f.some((x) => x.table === 'lecturas' && x.event === 'INSERT') && f.some((x) => x.table === 'lecturas_conflictos'));
 });
 
@@ -204,7 +207,7 @@ await intentar('Editar una cuenta asignada avisa al operador', async () => {
 
 await intentar('Operador con varias rutas', async () => {
   await page.getByRole('navigation').getByRole('link', { name: 'Operadores' }).click();
-  const fila = main.locator('tbody tr', { hasText: 'María Gómez' });
+  const fila = main.getByRole('article', { name: 'María Gómez' });
   await fila.getByRole('button', { name: 'Asignar rutas' }).click();
   const d = page.getByRole('dialog');
   await d.getByText('Rutas de María Gómez').waitFor();
